@@ -301,6 +301,55 @@ def f_hour():
     util.print_stop(start)
 
 
+def f_week():
+    """
+    构造与 week 相关的特征。
+    """
+    out_file = path_intermediate_dataset + hdf_week
+    if util.is_exist(out_file):
+        return
+
+    # 开始计时，并打印相关信息
+    start = util.print_start(hdf_hour)
+
+    # 加载 train.h5
+    train_df = pd.read_hdf(path_intermediate_dataset + hdf_train)
+
+    # 从`clickTime`中提取`week`特征
+    train_df['week'] = (train_df['clickTime'] / 10000).astype(int) % 7
+
+    # 提取`week`的`weight`特征
+    week_count_positive = train_df.loc[train_df['label'] == 1, 'week'].value_counts()
+    week_count_positive.sort_index(inplace=True)
+
+    week_count_positive_df = DataFrame(week_count_positive)
+    week_count_positive_df.reset_index(inplace=True)
+    week_count_positive_df.columns = ['week', 'week_weight']
+
+    # 提取`week`的`conversion_ratio`特征
+    week_count = train_df['week'].value_counts()
+    week_count.sort_index(inplace=True)
+
+    week_count_df = DataFrame(week_count)
+    week_count_df.reset_index(inplace=True)
+    week_count_df.columns = ['week', 'week_weight']
+
+    week_count_positive_df['week_conversion_ratio'] = \
+        week_count_positive_df['week_weight'] / week_count_df['week_weight']
+
+    # hour_conversion_ratio 归一化
+    mx = week_count_positive_df['week_conversion_ratio'].max()
+    mn = week_count_positive_df['week_conversion_ratio'].min()
+    week_count_positive_df['week_conversion_ratio'] = \
+        (week_count_positive_df['week_conversion_ratio'] - mn) / (mx - mn)
+
+    # 存储
+    util.safe_save(path_intermediate_dataset, hdf_week, week_count_positive_df)
+
+    # 停止计时，并打印相关信息
+    util.print_stop(start)
+
+
 def f_userID():
     out_file = path_intermediate_dataset + hdf_userID
     if util.is_exist(out_file):
@@ -489,6 +538,19 @@ def fg_context(hdf_out, hdf_in):
     df = df.merge(f_hour_df, how='left', on='hour')
     print('添加与`hour`相关的特征', df.shape)
     del f_hour_df
+    gc.collect()
+
+    # 提取 week 特征
+    df['week'] = (df['clickTime'] / 10000).astype(int) % 7
+
+    # 添加与`week`相关的特征
+    in_file = path_intermediate_dataset + hdf_week
+    if not os.path.exists(in_file):
+        f_week()
+    f_week_df = pd.read_hdf(in_file)
+    df = df.merge(f_week_df, how='left', on='week')
+    print('添加与`week`相关的特征', df.shape)
+    del f_week_df
     gc.collect()
 
     # 添加与`userID`相关的特征

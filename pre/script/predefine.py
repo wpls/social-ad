@@ -39,7 +39,15 @@ hdf_hour_weight = 'f_hour_weight.h5'
 hdf_conversion_ratio_connectionType = 'f_conversion_ratio_connectionType.h5'
 hdf_conversion_ratio_telecomsOperator = 'f_conversion_ratio_telecomsOperator.h5'
 hdf_hour = 'f_hour.h5'
+hdf_week = 'f_week.h5'
 hdf_userID = 'f_userID.h5'
+
+numeric_features_list = [
+    'hour_conversion_ratio',
+    'week_conversion_ratio',
+    'conversion_ratio_connectionType',
+    'conversion_ratio_telecomsOperator'
+]
 
 # 特征群文件
 hdf_context_dataset_fg = 'fg_context_dataset.h5'

@@ -31,9 +31,12 @@ def one_hot():
     del dataset['label']
     util.safe_save(path_modeling_dataset, npy_y, y)
 
+    # 区分出类别特征
+    categorical_features = ~dataset.columns.isin(numeric_features_list)
+
     # X
     from sklearn.preprocessing import OneHotEncoder
-    enc = OneHotEncoder()
+    enc = OneHotEncoder(categorical_features=categorical_features)
     X = enc.fit_transform(dataset.values)
     del dataset
     gc.collect()
