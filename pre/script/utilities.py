@@ -21,6 +21,9 @@ def safe_remove(filename):
 
 
 def safe_save(path, file_name, obj):
+    # 确保 path 存在，否则后面存储时会报错，这样就能在初次部署代码时自动创建目录了
+    os.makedirs(path, exist_ok=True)
+
     out_file = path + file_name
     safe_remove(out_file)
     num_dot = file_name.count('.')
