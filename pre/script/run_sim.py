@@ -7,7 +7,7 @@ from time import time
 
 start = time()
 
-pp.prepare_dataset()
+pp.prepare_dataset_all()
 fc.construct_feature()
 md.one_hot()
 md.tuning_hyper_parameters_sim()

@@ -7,7 +7,7 @@ import modeling as md
 from time import time
 start = time()
 
-pp.prepare_dataset()
+pp.prepare_dataset_all()
 fc.construct_feature()
 md.one_hot()
 md.split_train_test()

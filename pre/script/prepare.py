@@ -233,7 +233,54 @@ def userID_appID_pair_installed():
     gc.collect()
 
 
-def prepare_dataset():
+def datatset():
+    """
+    为统一地构造 click_count, conversion_count, conversion_ratio 这三个特征准备 hdf_dataset.
+    """
+
+    out_file = path_intermediate_dataset + hdf_dataset
+    if util.is_exist(out_file):
+        return
+
+    # 开始计时，并打印相关信息
+    start = util.print_start(hdf_dataset)
+
+    # ad
+    app_cat_df = pd.read_hdf(path_intermediate_dataset + hdf_app_cat)
+    ad_df = pd.read_hdf(path_intermediate_dataset + hdf_ad)
+    ad_df = ad_df.merge(app_cat_df, how='left', on='appID')
+    del app_cat_df
+    gc.collect()
+
+    # user
+    user_df = pd.read_hdf(path_intermediate_dataset + hdf_user)
+
+    # context_train
+    pos_df = pd.read_hdf(path_intermediate_dataset + hdf_pos)
+    context_train_df = pd.read_hdf(path_intermediate_dataset + hdf_train)
+    context_train_df = context_train_df.merge(pos_df, how='left', on='positionID')
+    del pos_df
+    gc.collect()
+
+    # dataset
+    dataset_df = context_train_df.merge(user_df, how='left', on='userID')
+    del context_train_df
+    del user_df
+    gc.collect()
+    dataset_df = dataset_df.merge(ad_df, how='left', on='creativeID')
+    del ad_df
+    gc.collect()
+
+    # 存储
+    util.safe_save(path_intermediate_dataset, hdf_dataset, dataset_df)
+
+    # 停止计时，并打印相关信息
+    util.print_stop(start)
+
+    gc.collect()
+
+
+def prepare_dataset_all():
     """ 一次性执行所有的准备操作
 
     Notes
@@ -255,5 +302,6 @@ def prepare_dataset():
     user_app()
     user_app_cat()
     userID_appID_pair_installed()
+    datatset()
 
     print('\nThe total time spent on preparing dataset: {0:.0f} s'.format(time() - start))
