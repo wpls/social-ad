@@ -123,7 +123,7 @@ def user():
 
     # 将地理位置调整到省级
     user_df['hometown'] = (user_df['hometown'] / 100).astype(int)
-    user_df['residence'] = (user_df['hometown'] / 100).astype(int)
+    user_df['residence'] = (user_df['residence'] / 100).astype(int)
 
     # 存储
     util.safe_save(path_intermediate_dataset, hdf_user, user_df)

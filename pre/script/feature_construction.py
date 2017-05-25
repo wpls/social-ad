@@ -678,11 +678,11 @@ def merge(hdf_out, hdf_in):
 
 # 这两个是每一次迭代特征都需要重新生成
 def merge_dataset():
-    merge(hdf_dataset, hdf_context_dataset_fg)
+    merge(hdf_dataset_fg, hdf_context_dataset_fg)
 
 
 def merge_testset_ol():
-    merge(hdf_testset_ol, hdf_context_testset_ol_fg)
+    merge(hdf_testset_ol_fg, hdf_context_testset_ol_fg)
 
 
 def construct_feature():

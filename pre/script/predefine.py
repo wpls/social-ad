@@ -2,6 +2,7 @@
 path_pre = '../'
 path_original_dataset = path_pre + 'original-dataset/'
 path_intermediate_dataset = path_pre + 'intermediate-dataset/'
+path_feature_group = path_pre + 'feature-group'
 path_modeling_dataset = path_pre + 'modeling-dataset/'
 path_model = path_pre + 'model/'
 path_submission_dataset = path_pre + 'submission-dataset/'
@@ -29,6 +30,7 @@ hdf_user_app = 'user_app.h5'
 # 计算的中间结果（以此减少内存占用）
 hdf_user_app_cat = 'user_app_cat.h5'
 hdf_userID_appID_pair_installed = 'userID_appID_pair_installed.h5'
+hdf_dataset = 'dataset.h5'
 
 # 从单个原始特征中提取出的特征
 hdf_user_pref_cat = 'f_user_pref_cat.h5'
@@ -55,9 +57,9 @@ hdf_context_testset_ol_fg = 'fg_context_testset_ol.h5'
 hdf_ad_fg = 'fg_ad.h5'
 hdf_user_fg = 'fg_user.h5'
 
-# 最终的数据集文件
-hdf_dataset = 'dataset.h5'
-hdf_testset_ol = 'testset_ol.h5'
+# 合并后的特征群文件
+hdf_dataset_fg = 'fg_dataset.h5'
+hdf_testset_ol_fg = 'fg_testset_ol.h5'
 
 # 稀疏矩阵, 一次项
 npz_ad = 'ad_csc.npz'
@@ -66,7 +68,7 @@ npz_context = 'context_csc.npz'
 npz_context_test_ol = 'context_csc_test_ol.npz'
 npz_user = 'user_csc.npz'
 npz_user_test_ol = 'user_csc_test_ol.npz'
-# 二次项
+# 稀疏矩阵, 二次项
 npz_user_ad = 'user_ad.npz'
 npz_user_ad_test_ol = 'user_ad_test_ol.npz'
 npz_user_context = 'user_context.npz'
@@ -79,7 +81,7 @@ npy_y = 'y.npy'
 npy_y_train = 'y_train.npy'
 npy_y_test = 'y_test.npy'
 
-# 稀疏矩阵
+# 稀疏矩阵，合并后的数据
 npz_X_linear = 'X_linear.npz'
 npz_X_interactive = 'X_interactive.npz'
 npz_X = 'X.npz'
@@ -87,9 +89,10 @@ npz_X_test_ol_linear = 'X_test_ol_linear.npz'
 npz_X_test_ol_interactive = 'X_test_ol_interactive.npz'
 npz_X_test_ol = 'X_test_ol.npz'
 
+# 稀疏矩阵，建模数据
 npz_X_train = 'X_train.npz'
 npz_X_test = 'X_test.npz'
 
-# 提交
+# 提交集
 csv_submission = 'submission.csv'
 

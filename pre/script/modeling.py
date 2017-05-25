@@ -24,7 +24,7 @@ def one_hot():
     start = time()
     print('\nStart one hot')
 
-    dataset = pd.read_hdf(path_intermediate_dataset + hdf_dataset)
+    dataset = pd.read_hdf(path_intermediate_dataset + hdf_dataset_fg)
 
     # y
     y = dataset['label']
@@ -42,7 +42,7 @@ def one_hot():
     gc.collect()
     util.safe_save(path_modeling_dataset, npz_X, X)
 
-    testset_ol = pd.read_hdf(path_intermediate_dataset + hdf_testset_ol)
+    testset_ol = pd.read_hdf(path_intermediate_dataset + hdf_testset_ol_fg)
 
     # X_test_ol
     X_test_ol = enc.transform(testset_ol.values)
