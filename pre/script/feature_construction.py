@@ -21,7 +21,7 @@ fg: feature group
 # ========== feature construction ad ==========
 
 def f_app_popularity():
-    out_file = path_intermediate_dataset + hdf_app_popularity
+    out_file = path_feature + hdf_app_popularity
     if util.is_exist(out_file):
         return
 
@@ -32,15 +32,15 @@ def f_app_popularity():
     user_app = pd.read_hdf(path_intermediate_dataset + hdf_user_app)
 
     # 提取 app 的热度特征
-    app_popularity = user_app.groupby('appID').count()
-    app_popularity.rename(columns={'userID': 'app_popularity'}, inplace=True)
+    app_popularity = user_app.groupby('appID', as_index=False).count()
+    app_popularity.rename(columns={'userID': fn_app_popularity}, inplace=True)
 
     # 手动释放内存
     del user_app
     gc.collect()
 
     # 存储
-    util.safe_save(path_intermediate_dataset, hdf_app_popularity, app_popularity)
+    util.safe_save(path_feature, hdf_app_popularity, app_popularity)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
@@ -81,10 +81,10 @@ def fg_ad():
     gc.collect()
 
     # 将 app_popularity 离散化
-    ad['app_popularity'] = pd.cut(ad['app_popularity'], np.logspace(0, 7, num=8), include_lowest=True, labels=False)
+    ad[fn_app_popularity] = pd.cut(ad[fn_app_popularity], np.logspace(0, 7, num=8), include_lowest=True, labels=False)
 
     # 将 app_popularity 的 NaN 填充为 6
-    ad['app_popularity'].fillna(6, inplace=True)
+    ad[fn_app_popularity].fillna(6, inplace=True)
 
     # 提取出部分特征
     selected_feature = ['creativeID',
@@ -111,7 +111,7 @@ def fg_ad():
 # ========== feature construction user ==========
 
 def f_user_activity():
-    out_file = path_intermediate_dataset + hdf_user_activity
+    out_file = path_feature + hdf_user_activity
     if util.is_exist(out_file):
         return
 
@@ -121,7 +121,7 @@ def f_user_activity():
     # 提取用户的活跃度特征
     user_app = pd.read_hdf(path_intermediate_dataset + hdf_user_app)
     user_activity = user_app.groupby('userID').count()
-    user_activity.rename(columns={'appID': 'user_activity'}, inplace=True)
+    user_activity.rename(columns={'appID': fn_user_activity}, inplace=True)
 
     # 手动释放内存
     del user_app
@@ -129,19 +129,19 @@ def f_user_activity():
 
     # 离散化
     interval = np.ceil(np.logspace(0, 3, 6))
-    user_activity['user_activity'] = \
-        pd.cut(user_activity['user_activity'], interval, include_lowest=True, labels=False)
+    user_activity[fn_user_activity] = \
+        pd.cut(user_activity[fn_user_activity], interval, include_lowest=True, labels=False)
     user_activity.reset_index(inplace=True)
 
     # 存储
-    util.safe_save(path_intermediate_dataset, hdf_user_activity, user_activity)
+    util.safe_save(path_feature, hdf_user_activity, user_activity)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
 
 
 def f_user_pref_cat():
-    out_file = path_intermediate_dataset + hdf_user_pref_cat
+    out_file = path_feature + hdf_user_pref_cat
     if util.is_exist(out_file):
         return
 
@@ -166,7 +166,7 @@ def f_user_pref_cat():
     user_pref_cat.rename(columns={'appCategory': 'cat_pref'}, inplace=True)
 
     # 存储
-    util.safe_save(path_intermediate_dataset, hdf_user_pref_cat, user_pref_cat)
+    util.safe_save(path_feature, hdf_user_pref_cat, user_pref_cat)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
@@ -183,10 +183,6 @@ def fg_user():
     # 加载 user 数据
     user = pd.read_hdf(path_intermediate_dataset + hdf_user)
 
-    # 对 age 分段
-    age_interval = [0, 1, 4, 14, 29, 44, 59, 74, 84]
-    user['age'] = pd.cut(user['age'], age_interval, right=False, include_lowest=True, labels=False)
-
     # 加载并添加用户的活跃度特征
     in_file = path_intermediate_dataset + hdf_user_activity
     if not os.path.exists(in_file):
@@ -199,7 +195,7 @@ def fg_user():
     gc.collect()
 
     # 将 user_activity 的 NaN 填充为 5
-    user['user_activity'].fillna(5, inplace=True)
+    user[fn_user_activity].fillna(5, inplace=True)
 
     # 加载并添加用户对app的品类偏好特征
     in_file = path_intermediate_dataset + hdf_user_pref_cat
@@ -247,104 +243,6 @@ def f_hour_weight():
 
     # 存储
     util.safe_save(path_intermediate_dataset, hdf_hour_weight, hour_weight_df)
-
-    # 停止计时，并打印相关信息
-    util.print_stop(start)
-
-
-def f_hour():
-    """
-    构造与 hour 相关的特征。
-    """
-    out_file = path_intermediate_dataset + hdf_hour
-    if util.is_exist(out_file):
-        return
-
-    # 开始计时，并打印相关信息
-    start = util.print_start(hdf_hour)
-
-    # 加载 train.h5
-    train_df = pd.read_hdf(path_intermediate_dataset + hdf_train)
-
-    # 从`clickTime`中提取`hour`特征
-    train_df['hour'] = (train_df['clickTime'] / 100 % 100).astype(int)
-
-    # 提取`hour`的`weight`特征
-    hour_count_positive = train_df.loc[train_df['label'] == 1, 'hour'].value_counts()
-    hour_count_positive.sort_index(inplace=True)
-
-    hour_count_positive_df = DataFrame(hour_count_positive)
-    hour_count_positive_df.reset_index(inplace=True)
-    hour_count_positive_df.columns = ['hour', 'hour_weight']
-
-    # 提取`hour`的`conversion_ratio`特征
-    hour_count = train_df['hour'].value_counts()
-    hour_count.sort_index(inplace=True)
-
-    hour_count_df = DataFrame(hour_count)
-    hour_count_df.reset_index(inplace=True)
-    hour_count_df.columns = ['hour', 'hour_weight']
-
-    hour_count_positive_df['hour_conversion_ratio'] = \
-        hour_count_positive_df['hour_weight'] / hour_count_df['hour_weight']
-
-    # hour_conversion_ratio 归一化
-    mx = hour_count_positive_df['hour_conversion_ratio'].max()
-    mn = hour_count_positive_df['hour_conversion_ratio'].min()
-    hour_count_positive_df['hour_conversion_ratio'] = \
-        (hour_count_positive_df['hour_conversion_ratio'] - mn) / (mx - mn)
-
-    # 存储
-    util.safe_save(path_intermediate_dataset, hdf_hour, hour_count_positive_df)
-
-    # 停止计时，并打印相关信息
-    util.print_stop(start)
-
-
-def f_week():
-    """
-    构造与 week 相关的特征。
-    """
-    out_file = path_intermediate_dataset + hdf_week
-    if util.is_exist(out_file):
-        return
-
-    # 开始计时，并打印相关信息
-    start = util.print_start(hdf_hour)
-
-    # 加载 train.h5
-    train_df = pd.read_hdf(path_intermediate_dataset + hdf_train)
-
-    # 从`clickTime`中提取`week`特征
-    train_df['week'] = (train_df['clickTime'] / 10000).astype(int) % 7
-
-    # 提取`week`的`weight`特征
-    week_count_positive = train_df.loc[train_df['label'] == 1, 'week'].value_counts()
-    week_count_positive.sort_index(inplace=True)
-
-    week_count_positive_df = DataFrame(week_count_positive)
-    week_count_positive_df.reset_index(inplace=True)
-    week_count_positive_df.columns = ['week', 'week_weight']
-
-    # 提取`week`的`conversion_ratio`特征
-    week_count = train_df['week'].value_counts()
-    week_count.sort_index(inplace=True)
-
-    week_count_df = DataFrame(week_count)
-    week_count_df.reset_index(inplace=True)
-    week_count_df.columns = ['week', 'week_weight']
-
-    week_count_positive_df['week_conversion_ratio'] = \
-        week_count_positive_df['week_weight'] / week_count_df['week_weight']
-
-    # hour_conversion_ratio 归一化
-    mx = week_count_positive_df['week_conversion_ratio'].max()
-    mn = week_count_positive_df['week_conversion_ratio'].min()
-    week_count_positive_df['week_conversion_ratio'] = \
-        (week_count_positive_df['week_conversion_ratio'] - mn) / (mx - mn)
-
-    # 存储
-    util.safe_save(path_intermediate_dataset, hdf_week, week_count_positive_df)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
@@ -407,92 +305,6 @@ def f_userID():
     # 手动释放内存
     del train_df
     gc.collect()
-
-    # 停止计时，并打印相关信息
-    util.print_stop(start)
-
-
-def f_conversion_ratio_connectionType():
-    out_file = path_intermediate_dataset + hdf_conversion_ratio_connectionType
-    if util.is_exist(out_file):
-        return
-
-    # 开始计时，并打印相关信息
-    start = util.print_start(hdf_conversion_ratio_connectionType)
-
-    # 加载数据
-    train_df = pd.read_hdf(path_intermediate_dataset + hdf_train)
-    # 提取 connectionType 的转化率特征
-    distribution_connectionType = train_df['connectionType'].value_counts(dropna=False)
-    distribution_connectionType.sort_index(inplace=True)
-
-    distribution_connectionType_positive = train_df.loc[train_df['label'] == 1, 'connectionType'].value_counts(
-        dropna=False)
-    distribution_connectionType_positive.sort_index(inplace=True)
-
-    # 手动释放内存
-    del train_df
-    gc.collect()
-
-    distribution_connectionType_ratio = distribution_connectionType_positive / distribution_connectionType
-
-    mx = distribution_connectionType_ratio.max()
-    mn = distribution_connectionType_ratio.min()
-    distribution_connectionType_ratio = (distribution_connectionType_ratio - mn) / (mx - mn)
-
-    conversion_ratio_connectionType = DataFrame(distribution_connectionType_ratio)
-    conversion_ratio_connectionType.reset_index(inplace=True)
-    conversion_ratio_connectionType.columns = ['connectionType', 'conversion_ratio_connectionType']
-
-    # 手动释放内存
-    del distribution_connectionType_ratio
-    gc.collect()
-
-    # 存储
-    util.safe_save(path_intermediate_dataset, hdf_conversion_ratio_connectionType, conversion_ratio_connectionType)
-
-    # 停止计时，并打印相关信息
-    util.print_stop(start)
-
-
-def f_conversion_ratio_telecomsOperator():
-    out_file = path_intermediate_dataset + hdf_conversion_ratio_telecomsOperator
-    if util.is_exist(out_file):
-        return
-
-    # 开始计时，并打印相关信息
-    start = util.print_start(hdf_conversion_ratio_telecomsOperator)
-
-    # 加载数据
-    train_df = pd.read_hdf(path_intermediate_dataset + hdf_train)
-    # 提取 telecomsOperator 的转化率特征
-    distribution_telecomsOperator = train_df['telecomsOperator'].value_counts(dropna=False)
-    distribution_telecomsOperator.sort_index(inplace=True)
-
-    distribution_telecomsOperator_positive = train_df.loc[train_df['label'] == 1, 'telecomsOperator'].value_counts(
-        dropna=False)
-    distribution_telecomsOperator_positive.sort_index(inplace=True)
-
-    # 手动释放内存
-    del train_df
-    gc.collect()
-
-    distribution_telecomsOperator_ratio = distribution_telecomsOperator_positive / distribution_telecomsOperator
-
-    mx = distribution_telecomsOperator_ratio.max()
-    mn = distribution_telecomsOperator_ratio.min()
-    distribution_telecomsOperator_ratio = (distribution_telecomsOperator_ratio - mn) / (mx - mn)
-
-    conversion_ratio_telecomsOperator = DataFrame(distribution_telecomsOperator_ratio)
-    conversion_ratio_telecomsOperator.reset_index(inplace=True)
-    conversion_ratio_telecomsOperator.columns = ['telecomsOperator', 'conversion_ratio_telecomsOperator']
-
-    # 手动释放内存
-    del distribution_telecomsOperator_ratio
-    gc.collect()
-
-    # 存储
-    util.safe_save(path_intermediate_dataset, hdf_conversion_ratio_telecomsOperator, conversion_ratio_telecomsOperator)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
@@ -593,7 +405,7 @@ def fg_context(hdf_out, hdf_in):
 
     # 只保留没有安装行为的 userID_appID（这个操作也应当放到数据清洗里）,还是提取为一个特征比较好
     # df = df.loc[~df['userID-appID'].isin(userID_appID)]
-    df['is_installed'] = df['userID-appID'].isin(userID_appID)
+    df[fn_is_installed] = df['userID-appID'].isin(userID_appID)
 
     # 释放内存
     del df['userID-appID']
@@ -635,10 +447,6 @@ def fg_context_dataset():
 
 def fg_context_testset_ol():
     fg_context(hdf_context_testset_ol_fg, hdf_test_ol)
-
-
-# 以上的是每一次迭代特征时，有改动的部分需要重新生成，可以通过提前手动
-# 删除来实现，否则如果已经存在，则跳过计算
 
 
 # ========== feature construction ==========
@@ -689,6 +497,37 @@ def fg_dataset(hdf_out, hdf_in):
             dataset_df = dataset_df.merge(count_ratio, how='left', on=c)
             del count_ratio
             gc.collect()
+
+    # # 加载并添加用户的活跃度特征
+    # print('\n正在添加用户的活跃度特征……')
+    # dataset_df = util.add_feature(dataset_df, hdf_user_activity, f_user_activity)
+    # # 将 user_activity 的 NaN 填充为 5
+    # dataset_df[fn_user_activity].fillna(5, inplace=True)
+
+    # # 加载并添加用户对app的品类偏好特征, 没有明显提升
+    # dataset_df = util.add_feature(dataset_df, hdf_user_pref_cat, f_user_pref_cat)
+    # # 将 cat_pref 的 NaN 填充为 0
+    # dataset_df['cat_pref'].fillna(0, inplace=True)
+
+    # # 添加 app 的流行度特征
+    # dataset_df = util.add_feature(dataset_df, hdf_app_popularity, f_app_popularity)
+    # # 将 app_popularity 离散化
+    # dataset_df[fn_app_popularity] = \
+    #     pd.cut(dataset_df[fn_app_popularity], np.logspace(0, 7, num=8), include_lowest=True, labels=False)
+    # # 将 app_popularity 的 NaN 填充为 6
+    # dataset_df[fn_app_popularity].fillna(6, inplace=True)
+
+    # 添加“该 userID_appID 是否已存在安装行为”的特征
+    dataset_df['userID-appID'] = util.elegant_pairing(dataset_df['userID'], dataset_df['appID'])
+    userID_appID = pd.read_hdf(path_intermediate_dataset + hdf_userID_appID_pair_installed)
+    dataset_df[fn_is_installed] = dataset_df['userID-appID'].isin(userID_appID)
+    del dataset_df['userID-appID']
+    del userID_appID
+    gc.collect()
+
+    # 删除不匹配的列
+    for c in columns_set_mismatch:
+        del dataset_df[c]
 
     # 准备存储，删除它们以避免干扰 one-hot    
     del dataset_df['clickTime']

@@ -45,12 +45,19 @@ hdf_user_pref_cat = 'f_user_pref_cat.h5'
 hdf_user_cat_weight = 'f_user_cat_weight.h5'
 hdf_app_popularity = 'f_app_popularity.h5'
 hdf_user_activity = 'f_user_activity.h5'
+
 hdf_hour_weight = 'f_hour_weight.h5'
 hdf_conversion_ratio_connectionType = 'f_conversion_ratio_connectionType.h5'
 hdf_conversion_ratio_telecomsOperator = 'f_conversion_ratio_telecomsOperator.h5'
 hdf_hour = 'f_hour.h5'
 hdf_week = 'f_week.h5'
+
 hdf_userID = 'f_userID.h5'
+
+# 特征名字 fn: feature name
+fn_user_activity = 'user_activity'
+fn_is_installed = 'is_installed'
+fn_app_popularity = 'app_popularity'
 
 # 注意用 set 而不是 list，以避免在程序中错误地重复添加
 # 那些取值个数较多的特征, 依次为[677, 3447, 6315, 7219, 2595627]

@@ -143,6 +143,10 @@ def user():
     user_df['hometown'] = (user_df['hometown'] / 100).astype(int)
     user_df['residence'] = (user_df['residence'] / 100).astype(int)
 
+    # 对 age 分段
+    age_interval = [0, 1, 4, 14, 29, 44, 59, 74, 84]
+    user_df['age'] = pd.cut(user_df['age'], age_interval, right=False, include_lowest=True, labels=False)
+
     # 存储
     util.safe_save(path_intermediate_dataset, hdf_user, user_df)
 
@@ -296,10 +300,6 @@ def datatset(hdf_out, hdf_in):
     # 如果条件满足，则舍弃后 5 天的负样本
     if 'train' in hdf_in and discard_negative_last_5_day:
         dataset_df = dataset_df.loc[(dataset_df['clickTime'] < 260000) | (dataset_df['label'] != 0)]
-
-    # 删除不匹配的列
-    for c in columns_set_mismatch:
-        del dataset_df[c]
 
     # 存储
     util.safe_save(path_intermediate_dataset, hdf_out, dataset_df)

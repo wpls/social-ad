@@ -111,7 +111,6 @@ def f_count_ratio(df, column):
     """
 
     hdf_out = 'f_count_ratio_' + column + '.h5'
-    out_file = path_feature + hdf_out
 
     click_count_column = 'click_count_' + column
     conversion_count_column = 'conversion_count_' + column
@@ -280,3 +279,27 @@ def check_value_count():
     print_value_count(testset_ol_df, hdf_testset_ol_fg)
     del testset_ol_df
     gc.collect()
+
+
+def add_feature(df, hdf_file, gen_func):
+    """
+    为数据集添加特征。
+    :param df: 数据集。
+    :param hdf_file: 特征文件。
+    :param gen_func: 生成该特征的函数
+    :return: 
+    """
+
+    # 加载并添加用户的活跃度特征
+    in_file = path_feature + hdf_file
+    if not os.path.exists(in_file):
+        gen_func()
+    feature = pd.read_hdf(in_file)
+    # 成立的条件是对应的合并column处于第1列
+    column = feature.columns.values[0]
+    df = df.merge(feature, how='left', on=column)
+    # 手动释放内存
+    del feature
+    gc.collect()
+
+    return df
