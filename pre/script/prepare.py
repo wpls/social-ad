@@ -1,4 +1,5 @@
 import gc
+import os
 
 import numpy as np
 import pandas as pd
@@ -19,6 +20,23 @@ from predefine import *
 # fg: feature group
 
 # 数据准备，执行一次之后，很少再重复执行
+
+
+def original_dataset():
+    """
+    如果 path_original_dataset 不存在，则创建该目录，同时下载'pre.zip'到该目录，并解压。
+    """
+
+    if not os.path.exists(path_original_dataset):
+        import urllib.request
+        urllib.request.urlretrieve(url_original_dataset, zip_original_dataset)
+
+        from zipfile import ZipFile
+        with ZipFile(zip_original_dataset, "r") as zip_ref:
+            zip_ref.extractall(path=path_pre)
+
+        # 重命名目录名称
+        os.rename(path_pre + 'pre', path_original_dataset)
 
 
 def transform_csv_to_hdf(csv, hdf):
@@ -308,9 +326,7 @@ def prepare_dataset_all():
     from time import time
     start = time()
 
-    # 如果 path_original_dataset 不存在，则创建该目录，同时下载'pre.zip'到该目录，并解压。
-    if not os.path.exists(path_original_dataset):
-        os.makedirs(path_original_dataset)
+    original_dataset()
 
     ad()
     app_cat()
