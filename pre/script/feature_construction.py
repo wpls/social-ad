@@ -684,7 +684,7 @@ def fg_dataset(hdf_out, hdf_in):
         if c not in columns_set_without_count_ratio:
             in_file = path_feature + 'f_count_ratio_' + c + '.h5'
             count_ratio = pd.read_hdf(in_file)
-            dataset_df.merge(count_ratio, how='left', on=c)
+            dataset_df = dataset_df.merge(count_ratio, how='left', on=c)
             del count_ratio
             gc.collect()
 
