@@ -652,9 +652,11 @@ def f_count_ratio():
     # 加载数据集
     trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
 
+    # 安全的将 hdf_numeric_features_set 清空, 以避免可能的重复添加
+    util.safe_remove(path_intermediate_dataset + hdf_numeric_features_set)
     # 遍历数据集中的有效特征
     for c in trainset_df.columns:
-        if c not in columns_set_without_count_ratio:
+        if c not in (columns_set_without_count_ratio | columns_set_mismatch):
             util.f_count_ratio(trainset_df, c)
 
     del trainset_df
@@ -669,9 +671,9 @@ def fg_dataset(hdf_out, hdf_in):
     :return: 
     """
 
-    out_file = path_feature + hdf_out
-    if util.is_exist(out_file):
-        return
+    # out_file = path_feature + hdf_out
+    # if util.is_exist(out_file):
+    #     return
 
     # 开始计时，并打印相关信息
     start = util.print_start(hdf_out)
@@ -681,7 +683,7 @@ def fg_dataset(hdf_out, hdf_in):
 
     # 为每个有效特征添加对应的 count_ratio 特征
     for c in dataset_df.columns:
-        if c not in columns_set_without_count_ratio:
+        if c not in (columns_set_without_count_ratio | columns_set_mismatch):
             in_file = path_feature + 'f_count_ratio_' + c + '.h5'
             count_ratio = pd.read_hdf(in_file)
             dataset_df = dataset_df.merge(count_ratio, how='left', on=c)
@@ -695,6 +697,13 @@ def fg_dataset(hdf_out, hdf_in):
     elif 'test' in hdf_in:
         del dataset_df['label']
         del dataset_df['instanceID']
+
+    # 检查缺失值
+    if util.check_null(dataset_df):
+        gc.collect()
+        return
+    else:
+        print('通过缺失值检查，不存在缺失值。')
 
     # 存储
     util.safe_save(path_feature, hdf_out, dataset_df)

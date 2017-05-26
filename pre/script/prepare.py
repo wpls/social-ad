@@ -297,6 +297,10 @@ def datatset(hdf_out, hdf_in):
     if 'train' in hdf_in and discard_negative_last_5_day:
         dataset_df = dataset_df.loc[(dataset_df['clickTime'] < 260000) | (dataset_df['label'] != 0)]
 
+    # 删除不匹配的列
+    for c in columns_set_mismatch:
+        del dataset_df[c]
+
     # 存储
     util.safe_save(path_intermediate_dataset, hdf_out, dataset_df)
 

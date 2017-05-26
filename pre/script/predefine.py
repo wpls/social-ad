@@ -71,6 +71,23 @@ columns_set_without_count_ratio = {
     'conversionTime',
     'instanceID'
 }
+# trainset 与 testset_ol 取值不匹配的列, 同时这些列本身也是应当舍弃的
+columns_set_mismatch = {
+    'advertiserID',
+    'camgaignID',
+    'adID',
+    'creativeID',
+    'positionID',
+    'userID'
+}
+# # 舍弃的列，因为无法做one-hot
+# columns_set_discarded = {
+#     'camgaignID',
+#     'adID',
+#     'creativeID',
+#     'positionID',
+#     'userID'
+# }
 
 # 特征群文件
 hdf_context_dataset_fg = 'fg_context_dataset.h5'

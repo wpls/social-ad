@@ -44,7 +44,7 @@ def one_hot():
     gc.collect()
     util.safe_save(path_modeling_dataset, npz_X, X)
 
-    testset_ol = pd.read_hdf(path_intermediate_dataset + hdf_testset_ol_fg)
+    testset_ol = pd.read_hdf(path_feature + hdf_testset_ol_fg)
 
     # X_test_ol
     X_test_ol = enc.transform(testset_ol.values)
@@ -170,7 +170,7 @@ def tuning_hyper_parameters_sim():
 
     # 训练模型
     from sklearn.linear_model import SGDClassifier
-    clf = SGDClassifier(loss='log', alpha=0.01, n_jobs=-1)    
+    clf = SGDClassifier(loss='log', alpha=0.0001, n_jobs=-1)
     clf.fit(X_train, y_train)
     
     # 打印在训练集上的 logloss
