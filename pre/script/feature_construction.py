@@ -693,7 +693,7 @@ def fg_dataset(hdf_out, hdf_in):
     if 'train' in hdf_in:
         del dataset_df['conversionTime']
     elif 'test' in hdf_in:
-	del dataset_df['label']
+        del dataset_df['label']
         del dataset_df['instanceID']
 
     # 存储
