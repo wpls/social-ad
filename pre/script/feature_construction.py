@@ -643,6 +643,74 @@ def fg_context_testset_ol():
 
 # ========== feature construction ==========
 
+def f_count_ratio():
+    """
+    为 hdf_datatset 中的特征构造 click_count, conversion_count, conversion_ratio 特征，并存储到硬盘。
+    :return: 
+    """
+
+    # 加载数据集
+    trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+
+    # 遍历数据集中的有效特征
+    for c in trainset_df.columns:
+        if c not in columns_set_without_count_ratio:
+            util.f_count_ratio(trainset_df, c, numeric_features_set)
+
+    del trainset_df
+    gc.collect()
+
+
+def fg_dataset(hdf_out, hdf_in):
+    """
+    为 trainset 和 testset_ol 添加已经构造好的特征。
+    :param hdf_out: 
+    :param hdf_in: 
+    :return: 
+    """
+
+    out_file = path_feature + hdf_out
+    if util.is_exist(out_file):
+        return
+
+    # 开始计时，并打印相关信息
+    start = util.print_start(hdf_out)
+
+    # 加载 hdf_in
+    dataset_df = pd.read_hdf(path_intermediate_dataset + hdf_in)
+
+    # 为每个有效特征添加对应的 count_ratio 特征
+    for c in dataset_df.columns:
+        if c not in columns_set_without_count_ratio:
+            in_file = path_feature + 'f_count_ratio_' + c + '.h5'
+            count_ratio = pd.read_hdf(in_file)
+            dataset_df.merge(count_ratio, how='left', on=c)
+            del count_ratio
+            gc.collect()
+
+    # 存储
+    util.safe_save(path_feature, hdf_out, dataset_df)
+
+    # 停止计时，并打印相关信息
+    util.print_stop(start)
+
+
+def fg_trainset():
+    """
+    为 trainset 添加已经构造好的特征。
+    :return: 
+    """
+    fg_dataset(hdf_trainset_fg, hdf_trainset)
+
+
+def fg_testset_ol():
+    """
+    为 testset_ol 添加已经构造好的特征。
+    :return: 
+    """
+    fg_dataset(hdf_testset_ol_fg, hdf_testset_ol)
+
+
 def merge(hdf_out, hdf_in):
     # 开始计时，并打印相关信息
     start = util.print_start(hdf_out)
@@ -678,7 +746,7 @@ def merge(hdf_out, hdf_in):
 
 # 这两个是每一次迭代特征都需要重新生成
 def merge_dataset():
-    merge(hdf_dataset_fg, hdf_context_dataset_fg)
+    merge(hdf_trainset_fg, hdf_context_dataset_fg)
 
 
 def merge_testset_ol():
@@ -689,11 +757,14 @@ def construct_feature():
     # 计时开始
     start = time()
 
-    fg_ad()
-    fg_user()
-    fg_context_dataset()
-    fg_context_testset_ol()
-    merge_dataset()
-    merge_testset_ol()
+    # fg_ad()
+    # fg_user()
+    # fg_context_dataset()
+    # fg_context_testset_ol()
+    # merge_dataset()
+    # merge_testset_ol()
+    f_count_ratio()
+    fg_trainset()
+    fg_testset_ol()
 
     print('\nThe total time spent on constructing feature: {0:.0f} s'.format(time() - start))

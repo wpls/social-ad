@@ -233,17 +233,17 @@ def userID_appID_pair_installed():
     gc.collect()
 
 
-def datatset():
+def datatset(hdf_out, hdf_in):
     """
-    为统一地构造 click_count, conversion_count, conversion_ratio 这三个特征准备 hdf_dataset.
+    为统一地构造 click_count, conversion_count, conversion_ratio 这三个特征准备数据集.
     """
 
-    out_file = path_intermediate_dataset + hdf_dataset
+    out_file = path_intermediate_dataset + hdf_out
     if util.is_exist(out_file):
         return
 
     # 开始计时，并打印相关信息
-    start = util.print_start(hdf_dataset)
+    start = util.print_start(hdf_out)
 
     # ad
     app_cat_df = pd.read_hdf(path_intermediate_dataset + hdf_app_cat)
@@ -255,29 +255,45 @@ def datatset():
     # user
     user_df = pd.read_hdf(path_intermediate_dataset + hdf_user)
 
-    # context_train
+    # context
     pos_df = pd.read_hdf(path_intermediate_dataset + hdf_pos)
-    context_train_df = pd.read_hdf(path_intermediate_dataset + hdf_train)
-    context_train_df = context_train_df.merge(pos_df, how='left', on='positionID')
+    context_df = pd.read_hdf(path_intermediate_dataset + hdf_in)
+    context_df = context_df.merge(pos_df, how='left', on='positionID')
     del pos_df
     gc.collect()
 
     # dataset
-    dataset_df = context_train_df.merge(user_df, how='left', on='userID')
-    del context_train_df
+    dataset_df = context_df.merge(user_df, how='left', on='userID')
+    del context_df
     del user_df
     gc.collect()
     dataset_df = dataset_df.merge(ad_df, how='left', on='creativeID')
     del ad_df
     gc.collect()
 
+    # 准备 hour, week
+    dataset_df['hour'] = (dataset_df['clickTime'] / 100 % 100).astype(int)
+    dataset_df['week'] = (dataset_df['clickTime'] / 10000).astype(int) % 7
+
+    # 如果条件满足，则舍弃后 5 天的负样本
+    if 'train' in hdf_in and discard_negative_last_5_day:
+        dataset_df = dataset_df.loc[(dataset_df['clickTime'] < 260000) | (dataset_df['label'] != 0)]
+
     # 存储
-    util.safe_save(path_intermediate_dataset, hdf_dataset, dataset_df)
+    util.safe_save(path_intermediate_dataset, hdf_out, dataset_df)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
 
     gc.collect()
+
+
+def trainset():
+    datatset(hdf_trainset, hdf_train)
+
+
+def testset_ol():
+    datatset(hdf_testset_ol, hdf_test_ol)
 
 
 def prepare_dataset_all():
@@ -292,6 +308,10 @@ def prepare_dataset_all():
     from time import time
     start = time()
 
+    # 如果 path_original_dataset 不存在，则创建该目录，同时下载'pre.zip'到该目录，并解压。
+    if not os.path.exists(path_original_dataset):
+        os.makedirs(path_original_dataset)
+
     ad()
     app_cat()
     pos()
@@ -302,6 +322,7 @@ def prepare_dataset_all():
     user_app()
     user_app_cat()
     userID_appID_pair_installed()
-    datatset()
+    trainset()
+    testset_ol()
 
     print('\nThe total time spent on preparing dataset: {0:.0f} s'.format(time() - start))

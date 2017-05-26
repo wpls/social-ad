@@ -2,10 +2,13 @@
 path_pre = '../'
 path_original_dataset = path_pre + 'original-dataset/'
 path_intermediate_dataset = path_pre + 'intermediate-dataset/'
-path_feature_group = path_pre + 'feature-group'
+path_feature = path_pre + 'feature/'
 path_modeling_dataset = path_pre + 'modeling-dataset/'
 path_model = path_pre + 'model/'
 path_submission_dataset = path_pre + 'submission-dataset/'
+
+# 是否舍弃后 5 天的负样本
+discard_negative_last_5_day = True
 
 # 原始文件
 csv_ad = 'ad.csv'
@@ -30,7 +33,8 @@ hdf_user_app = 'user_app.h5'
 # 计算的中间结果（以此减少内存占用）
 hdf_user_app_cat = 'user_app_cat.h5'
 hdf_userID_appID_pair_installed = 'userID_appID_pair_installed.h5'
-hdf_dataset = 'dataset.h5'
+hdf_trainset = 'trainset.h5'
+hdf_testset_ol = 'testset_ol.h5'
 
 # 从单个原始特征中提取出的特征
 hdf_user_pref_cat = 'f_user_pref_cat.h5'
@@ -44,12 +48,24 @@ hdf_hour = 'f_hour.h5'
 hdf_week = 'f_week.h5'
 hdf_userID = 'f_userID.h5'
 
-numeric_features_list = [
-    'hour_conversion_ratio',
-    'week_conversion_ratio',
-    'conversion_ratio_connectionType',
-    'conversion_ratio_telecomsOperator'
-]
+# 注意用 set 而不是 list，以避免在程序中错误地重复添加
+# 那些取值个数较多的特征, 依次为[677, 3447, 6315, 7219, 2595627]
+dense_feature_name_set = {
+    'camgaignID',
+    'adID',
+    'creativeID',
+    'positionID',
+    'userID'
+}
+# 不应该手动添加，而应该在构造该特征时自动添加
+numeric_features_set = set()
+# 那些无法提取 count_ratio 的 columns
+columns_set_without_count_ratio = {
+    'label',
+    'clickTime',
+    'conversionTime',
+    'instanceID'
+}
 
 # 特征群文件
 hdf_context_dataset_fg = 'fg_context_dataset.h5'
@@ -58,7 +74,7 @@ hdf_ad_fg = 'fg_ad.h5'
 hdf_user_fg = 'fg_user.h5'
 
 # 合并后的特征群文件
-hdf_dataset_fg = 'fg_dataset.h5'
+hdf_trainset_fg = 'fg_trainset.h5'
 hdf_testset_ol_fg = 'fg_testset_ol.h5'
 
 # 稀疏矩阵, 一次项
