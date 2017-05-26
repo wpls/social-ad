@@ -62,7 +62,8 @@ dense_feature_name_set = {
     'userID'
 }
 # 不应该手动添加，而应该在构造该特征时自动添加
-numeric_features_set = set()
+# numeric_features_set = set()
+hdf_numeric_features_set = 'numeric_features.h5'
 # 那些无法提取 count_ratio 的 columns
 columns_set_without_count_ratio = {
     'label',

@@ -24,21 +24,23 @@ def one_hot():
     start = time()
     print('\nStart one hot')
 
-    dataset = pd.read_hdf(path_intermediate_dataset + hdf_trainset_fg)
+    trainset_df = pd.read_hdf(path_feature + hdf_trainset_fg)
 
     # y
-    y = dataset['label']
-    del dataset['label']
+    y = trainset_df['label']
+    del trainset_df['label']
     util.safe_save(path_modeling_dataset, npy_y, y)
 
     # 区分出类别特征
-    categorical_features = ~dataset.columns.isin(numeric_features_set)
+    numeric_features_s = pd.read_hdf(path_intermediate_dataset + hdf_numeric_features_set)
+    numeric_features_set = set(numeric_features_s)
+    categorical_features = ~trainset_df.columns.isin(numeric_features_set)
 
     # X
     from sklearn.preprocessing import OneHotEncoder
     enc = OneHotEncoder(categorical_features=categorical_features)
-    X = enc.fit_transform(dataset.values)
-    del dataset
+    X = enc.fit_transform(trainset_df.values)
+    del trainset_df
     gc.collect()
     util.safe_save(path_modeling_dataset, npz_X, X)
 

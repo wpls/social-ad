@@ -655,7 +655,7 @@ def f_count_ratio():
     # 遍历数据集中的有效特征
     for c in trainset_df.columns:
         if c not in columns_set_without_count_ratio:
-            util.f_count_ratio(trainset_df, c, numeric_features_set)
+            util.f_count_ratio(trainset_df, c)
 
     del trainset_df
     gc.collect()
