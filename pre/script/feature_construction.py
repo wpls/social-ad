@@ -688,12 +688,12 @@ def fg_dataset(hdf_out, hdf_in):
             del count_ratio
             gc.collect()
 
-    # 准备存储，删除它们以避免干扰 one-hot
-    del dataset_df['label']
+    # 准备存储，删除它们以避免干扰 one-hot    
     del dataset_df['clickTime']
     if 'train' in hdf_in:
         del dataset_df['conversionTime']
     elif 'test' in hdf_in:
+	del dataset_df['label']
         del dataset_df['instanceID']
 
     # 存储
