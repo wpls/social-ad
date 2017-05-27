@@ -163,7 +163,7 @@ def f_user_pref_cat():
     group_idxmax = \
         user_cat_count.loc[user_cat_count['appCategory'] != 0, ['userID', 'count']].groupby('userID').idxmax()
     user_pref_cat = user_cat_count.loc[group_idxmax['count'], ['userID', 'appCategory']]
-    user_pref_cat.rename(columns={'appCategory': 'cat_pref'}, inplace=True)
+    user_pref_cat.rename(columns={'appCategory': fn_cat_pref}, inplace=True)
 
     # 存储
     util.safe_save(path_feature, hdf_user_pref_cat, user_pref_cat)
@@ -209,7 +209,7 @@ def fg_user():
     gc.collect()
 
     # 将 cat_pref 的 NaN 填充为 0
-    user['cat_pref'].fillna(0, inplace=True)
+    user[fn_cat_pref].fillna(0, inplace=True)
 
     # 存储
     util.safe_save(path_intermediate_dataset, hdf_user_fg, user)
@@ -309,7 +309,7 @@ def f_userID():
     # 停止计时，并打印相关信息
     util.print_stop(start)
 
-
+"""
 def fg_context(hdf_out, hdf_in):
     out_file = path_intermediate_dataset + hdf_out
     if util.is_exist(out_file):
@@ -324,7 +324,7 @@ def fg_context(hdf_out, hdf_in):
     # 添加 connectionType 的转化率特征
     in_file = path_intermediate_dataset + hdf_conversion_ratio_connectionType
     if not os.path.exists(in_file):
-        f_conversion_ratio_connectionType()
+        # f_conversion_ratio_connectionType()
     conversion_ratio_connectionType = pd.read_hdf(in_file)
     df = df.merge(conversion_ratio_connectionType, how='left', on='connectionType')
     print('添加 connectionType 的转化率特征', df.shape)
@@ -447,6 +447,7 @@ def fg_context_dataset():
 
 def fg_context_testset_ol():
     fg_context(hdf_context_testset_ol_fg, hdf_test_ol)
+"""
 
 
 # ========== feature construction ==========
@@ -498,24 +499,26 @@ def fg_dataset(hdf_out, hdf_in):
             del count_ratio
             gc.collect()
 
-    # # 加载并添加用户的活跃度特征
-    # print('\n正在添加用户的活跃度特征……')
-    # dataset_df = util.add_feature(dataset_df, hdf_user_activity, f_user_activity)
-    # # 将 user_activity 的 NaN 填充为 5
-    # dataset_df[fn_user_activity].fillna(5, inplace=True)
+    # 加载并添加用户的活跃度特征
+    print('\n正在添加用户的活跃度特征……')
+    dataset_df = util.add_feature(dataset_df, hdf_user_activity, f_user_activity)
+    # 将 user_activity 的 NaN 填充为 5
+    dataset_df[fn_user_activity].fillna(5, inplace=True)
 
-    # # 加载并添加用户对app的品类偏好特征, 没有明显提升
+    # # 加载并添加用户对app的品类偏好特征
     # dataset_df = util.add_feature(dataset_df, hdf_user_pref_cat, f_user_pref_cat)
     # # 将 cat_pref 的 NaN 填充为 0
-    # dataset_df['cat_pref'].fillna(0, inplace=True)
+    # dataset_df[fn_cat_pref].fillna(0, inplace=True)
+    # # 同时构造 is_pref_cat 特征
+    # dataset_df[fn_is_pref_cat] = dataset_df['appCategory'] == dataset_df[fn_cat_pref]
 
-    # # 添加 app 的流行度特征
-    # dataset_df = util.add_feature(dataset_df, hdf_app_popularity, f_app_popularity)
-    # # 将 app_popularity 离散化
-    # dataset_df[fn_app_popularity] = \
-    #     pd.cut(dataset_df[fn_app_popularity], np.logspace(0, 7, num=8), include_lowest=True, labels=False)
-    # # 将 app_popularity 的 NaN 填充为 6
-    # dataset_df[fn_app_popularity].fillna(6, inplace=True)
+    # 添加 app 的流行度特征
+    dataset_df = util.add_feature(dataset_df, hdf_app_popularity, f_app_popularity)
+    # 将 app_popularity 离散化
+    dataset_df[fn_app_popularity] = \
+        pd.cut(dataset_df[fn_app_popularity], np.logspace(0, 7, num=8), include_lowest=True, labels=False)
+    # 将 app_popularity 的 NaN 填充为 6
+    dataset_df[fn_app_popularity].fillna(6, inplace=True)
 
     # 添加二次组合特征 user(age, gender, education, residence)-connectionType
     dataset_df[fn_age_connectionType] = util.elegant_pairing(dataset_df['age'], dataset_df['connectionType'])
@@ -524,6 +527,14 @@ def fg_dataset(hdf_out, hdf_in):
         util.elegant_pairing(dataset_df['education'], dataset_df['connectionType'])
     dataset_df[fn_residence_connectionType] = \
         util.elegant_pairing(dataset_df['residence'], dataset_df['connectionType'])
+
+    # 添加二次组合特征 user-appCategory
+    dataset_df[fn_age_appCategory] = util.elegant_pairing(dataset_df['age'], dataset_df['appCategory'])
+    dataset_df[fn_gender_appCategory] = util.elegant_pairing(dataset_df['gender'], dataset_df['appCategory'])
+    dataset_df[fn_education_appCategory] = util.elegant_pairing(dataset_df['education'], dataset_df['appCategory'])
+    dataset_df[fn_marriageStatus_appCategory] = \
+        util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['appCategory'])
+    dataset_df[fn_haveBaby_appCategory] = util.elegant_pairing(dataset_df['haveBaby'], dataset_df['appCategory'])
 
     # 添加 connectionType-appCategory
     dataset_df[fn_appCategory_connectionType] = \
@@ -599,7 +610,7 @@ def merge(hdf_out, hdf_in):
     gc.collect()
 
     # 构造 is_pref_cat 特征
-    dataset['is_pref_cat'] = dataset['appCategory'] == dataset['cat_pref']
+    dataset[fn_is_pref_cat] = dataset['appCategory'] == dataset[fn_cat_pref]
 
     # 删除 creativeID, userID 两列
     del dataset['creativeID']

@@ -7,10 +7,9 @@ from pandas import DataFrame
 from scipy.sparse import load_npz
 from sklearn.externals import joblib
 
-import feature_construction as fc
-import prepare as pp
 import utilities as util
 from predefine import *
+
 
 # 缩写
 # fe: Feature Engineering
@@ -104,22 +103,24 @@ def tuning_hyper_parameters():
     print('\nStart tuning hyper parameters')
 
     # 加载训练集
-    X_train = load_npz(path_modeling_dataset + npz_X_train)
-    y_train = np.load(path_modeling_dataset + npy_y_train)
+    # X_train = load_npz(path_modeling_dataset + npz_X_train)
+    # y_train = np.load(path_modeling_dataset + npy_y_train)
+    X_train = load_npz(path_modeling_dataset + npz_X)
+    y_train = np.load(path_modeling_dataset + npy_y)
 
     from sklearn.metrics import make_scorer, log_loss
     loss = make_scorer(log_loss, greater_is_better=False, needs_proba=True)
 
     from sklearn.model_selection import TimeSeriesSplit
-    tscv = TimeSeriesSplit(n_splits=5)
+    tscv = TimeSeriesSplit(n_splits=10)
 
     # GridSearch
     from sklearn.model_selection import GridSearchCV
     from sklearn.linear_model import SGDClassifier
-    alphas = np.logspace(-4, -1, 4)
+    alphas = np.logspace(-7, -1, 7)
     param_grid = {'alpha': alphas}
     generator = tscv.split(X_train)
-    clf = GridSearchCV(SGDClassifier(loss='log', n_jobs=-1), param_grid, cv=generator, scoring=loss, n_jobs=-1)
+    clf = GridSearchCV(SGDClassifier(loss='log', penalty='l1', n_jobs=-1), param_grid, cv=generator, scoring=loss, n_jobs=-1)
 
     # 训练模型
     clf.fit(X_train, y_train)
@@ -141,16 +142,16 @@ def tuning_hyper_parameters():
     del y_train
     gc.collect()
 
-    # 加载测试集
-    X_test = load_npz(path_modeling_dataset + npz_X_test)
-    y_test = np.load(path_modeling_dataset + npy_y_test)
-    # 打印在测试集上的 logloss
-    print('logloss in testset: ', -clf.score(X=X_test, y=y_test))
+    # # 加载测试集
+    # X_test = load_npz(path_modeling_dataset + npz_X_test)
+    # y_test = np.load(path_modeling_dataset + npy_y_test)
+    # # 打印在测试集上的 logloss
+    # print('logloss in testset: ', -clf.score(X=X_test, y=y_test))
 
-    # 手动释放内存
-    del X_test
-    del y_test
-    gc.collect()
+    # # 手动释放内存
+    # del X_test
+    # del y_test
+    # gc.collect()
 
     # 存储模型
     util.safe_save(path_model, 'sgd_lr.pkl', clf.best_estimator_)

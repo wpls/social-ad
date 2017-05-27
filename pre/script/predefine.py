@@ -65,6 +65,15 @@ fn_education_connectionType = 'education_connectionType'
 fn_residence_connectionType = 'residence_connectionType'
 fn_appCategory_connectionType = 'appCategory_connectionType'
 
+fn_age_appCategory = 'age_appCategory'
+fn_gender_appCategory = 'gender_appCategory'
+fn_education_appCategory = 'education_appCategory'
+fn_marriageStatus_appCategory = 'marriageStatus_appCategory'
+fn_haveBaby_appCategory = 'haveBaby_appCategory'
+
+fn_cat_pref = 'cat_pref'
+fn_is_pref_cat = 'is_pref_cat'
+
 # 注意用 set 而不是 list，以避免在程序中错误地重复添加
 # 那些取值个数较多的特征, 依次为[677, 3447, 6315, 7219, 2595627]
 dense_feature_name_set = {
