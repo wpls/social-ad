@@ -115,6 +115,9 @@ def train():
     # 将剩余的缺失值置为 0
     train_df['telecomsOperator'].fillna(value=0, inplace=True)
 
+    # 重新以 clickTime 排序
+    train_df.sort_values(by='clickTime', inplace=True)
+
     # 存储
     util.safe_save(path_intermediate_dataset, hdf_train, train_df)
 
