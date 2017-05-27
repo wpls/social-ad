@@ -59,6 +59,12 @@ fn_user_activity = 'user_activity'
 fn_is_installed = 'is_installed'
 fn_app_popularity = 'app_popularity'
 
+fn_age_connectionType = 'age_connectionType'
+fn_gender_connectionType = 'gender_connectionType'
+fn_education_connectionType = 'education_connectionType'
+fn_residence_connectionType = 'residence_connectionType'
+fn_appCategory_connectionType = 'appCategory_connectionType'
+
 # 注意用 set 而不是 list，以避免在程序中错误地重复添加
 # 那些取值个数较多的特征, 依次为[677, 3447, 6315, 7219, 2595627]
 dense_feature_name_set = {

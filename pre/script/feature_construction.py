@@ -517,6 +517,18 @@ def fg_dataset(hdf_out, hdf_in):
     # # 将 app_popularity 的 NaN 填充为 6
     # dataset_df[fn_app_popularity].fillna(6, inplace=True)
 
+    # 添加二次组合特征 user(age, gender, education, residence)-connectionType
+    dataset_df[fn_age_connectionType] = util.elegant_pairing(dataset_df['age'], dataset_df['connectionType'])
+    dataset_df[fn_gender_connectionType] = util.elegant_pairing(dataset_df['gender'], dataset_df['connectionType'])
+    dataset_df[fn_education_connectionType] = \
+        util.elegant_pairing(dataset_df['education'], dataset_df['connectionType'])
+    dataset_df[fn_residence_connectionType] = \
+        util.elegant_pairing(dataset_df['residence'], dataset_df['connectionType'])
+
+    # 添加 connectionType-appCategory
+    dataset_df[fn_appCategory_connectionType] = \
+        util.elegant_pairing(dataset_df['connectionType'], dataset_df['appCategory'])
+
     # 添加“该 userID_appID 是否已存在安装行为”的特征
     dataset_df['userID-appID'] = util.elegant_pairing(dataset_df['userID'], dataset_df['appID'])
     userID_appID = pd.read_hdf(path_intermediate_dataset + hdf_userID_appID_pair_installed)
