@@ -103,7 +103,6 @@ def f_count_ratio(df, column):
     对 df 中的特定 column 构造 click_count, conversion_count, conversion_ratio 特征，并存储到硬盘。
     :param df: pandas.DataFrame 对象
     :param column: string, 特定 column
-    :return: n * 4 的 DataFrame，第一列是column, 后三列是上述特征
     
     Notes
     -----
@@ -171,6 +170,68 @@ def f_count_ratio(df, column):
     # 之前是把这部分作为数值特征的，现在把他们删除掉试试
     if column in dense_feature_name_set:
         del count_ratio[click_count_column]
+
+    # 存储
+    safe_save(path_feature, hdf_out, count_ratio)
+
+    # 停止计时，并打印相关信息
+    print_stop(start)
+
+
+def f_conversion_ratio(df, column):
+    """
+    对 df 中的特定 column 构造 conversion_ratio 特征，并存储到硬盘。
+    :param df: pandas.DataFrame 对象
+    :param column: string, 特定 column
+
+    Notes
+    -----
+    存储到硬盘而不是返回结果，是因为 context_train 和 context_test_ol 都需要这些特征，以方便两者做合并。
+    """
+
+    hdf_out = 'f_conversion_ratio_' + column + '.h5'
+
+    click_count_column = 'click_count_' + column
+    conversion_count_column = 'conversion_count_' + column
+    conversion_ratio_column = 'conversion_ratio_' + column
+
+    # 区分数值特征与类别特征，方便后面做 one-hot 处理
+    numeric_features = set()
+    file_name = path_intermediate_dataset + hdf_numeric_features_set
+    if os.path.exists(file_name):  # 这个判断条件很重要，别删
+        numeric_features = set(pd.read_hdf(file_name))
+
+    # 这里与`f_count_ratio`不同
+    numeric_features |= {conversion_ratio_column}
+
+    safe_save(path_intermediate_dataset, hdf_numeric_features_set, Series(list(numeric_features)))
+
+    # if is_exist(out_file):
+    #     return
+
+    # 开始计时，并打印相关信息
+    start = print_start(hdf_out)
+
+    count = DataFrame(df[column].value_counts())
+    count.reset_index(inplace=True)
+    count.columns = [column, click_count_column]
+
+    conversion_count = DataFrame(df.loc[df['label'] == 1, column].value_counts())
+    conversion_count.reset_index(inplace=True)
+    conversion_count.columns = [column, conversion_count_column]
+
+    count_ratio = count.merge(conversion_count, how='left', on=column)
+    count_ratio[conversion_count_column].fillna(0, inplace=True)
+
+    del count
+    del conversion_count
+    gc.collect()
+
+    count_ratio[conversion_ratio_column] = count_ratio[conversion_count_column] / count_ratio[click_count_column]
+    del count_ratio[conversion_count_column]
+    del count_ratio[click_count_column]
+
+    # conversion_ratio 没有必要取对数，归一化
 
     # 存储
     safe_save(path_feature, hdf_out, count_ratio)

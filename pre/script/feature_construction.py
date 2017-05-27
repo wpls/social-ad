@@ -472,6 +472,25 @@ def f_count_ratio():
     gc.collect()
 
 
+def f_conversion_ratio():
+    """
+    为 hdf_datatset 中的特征构造 conversion_ratio 特征，并存储到硬盘。
+    """
+
+    # 加载数据集
+    trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+
+    # 安全的将 hdf_numeric_features_set 清空, 以避免可能的重复添加
+    util.safe_remove(path_intermediate_dataset + hdf_numeric_features_set)
+    # 遍历数据集中的有效特征
+    for c in trainset_df.columns:
+        if c not in (columns_set_without_count_ratio | columns_set_mismatch):
+            util.f_conversion_ratio(trainset_df, c)
+
+    del trainset_df
+    gc.collect()
+
+
 def fg_dataset(hdf_out, hdf_in):
     """
     为 trainset 和 testset_ol 添加已经构造好的特征。
@@ -490,10 +509,19 @@ def fg_dataset(hdf_out, hdf_in):
     # 加载 hdf_in
     dataset_df = pd.read_hdf(path_intermediate_dataset + hdf_in)
 
-    # 为每个有效特征添加对应的 count_ratio 特征
+    # # 为每个有效特征添加对应的 count_ratio 特征
+    # for c in dataset_df.columns:
+    #     if c not in (columns_set_without_count_ratio | columns_set_mismatch):
+    #         in_file = path_feature + 'f_count_ratio_' + c + '.h5'
+    #         count_ratio = pd.read_hdf(in_file)
+    #         dataset_df = dataset_df.merge(count_ratio, how='left', on=c)
+    #         del count_ratio
+    #         gc.collect()
+
+    # 为每个有效特征添加对应的 conversion_ratio 特征
     for c in dataset_df.columns:
         if c not in (columns_set_without_count_ratio | columns_set_mismatch):
-            in_file = path_feature + 'f_count_ratio_' + c + '.h5'
+            in_file = path_feature + 'f_conversion_ratio_' + c + '.h5'
             count_ratio = pd.read_hdf(in_file)
             dataset_df = dataset_df.merge(count_ratio, how='left', on=c)
             del count_ratio
@@ -642,7 +670,8 @@ def construct_feature():
     # fg_context_testset_ol()
     # merge_dataset()
     # merge_testset_ol()
-    f_count_ratio()
+    # f_count_ratio()
+    f_conversion_ratio()
     fg_trainset()
     fg_testset_ol()
 
