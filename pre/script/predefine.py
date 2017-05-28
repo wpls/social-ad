@@ -8,7 +8,7 @@ path_model = path_pre + 'model/'
 path_submission_dataset = path_pre + 'submission-dataset/'
 
 # 是否舍弃后 5 天的负样本
-discard_negative_last_5_day = True
+discard_negative_last_5_day = False
 
 # 获取比赛数据集的链接
 url_original_dataset = 'http://spabigdata-1253211098.file.myqcloud.com/pre.zip'
