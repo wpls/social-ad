@@ -364,3 +364,16 @@ def add_feature(df, hdf_file, gen_func):
     gc.collect()
 
     return df
+
+
+def to_minute(df, column):
+    """
+    将官方编码的时间转换为以分钟表示的时间。
+    :param df:
+    :param column: 时间列。
+    """
+    indexer = ~df[column].isnull()
+    day = np.floor(df.loc[indexer, column] / 10000)
+    hour = np.floor(df.loc[indexer, column] / 100) % 100
+    minute = df.loc[indexer, column] % 100
+    df.loc[indexer, column + '_min'] = day * 24 * 60 + hour * 60 + minute

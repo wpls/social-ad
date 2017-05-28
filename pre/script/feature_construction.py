@@ -451,6 +451,71 @@ def fg_context_testset_ol():
 
 
 # ========== feature construction ==========
+def f_confidence_trainset(trainset_df):
+    """
+    为trainset构造样本的置信度特征。
+    """
+
+    # 将时间转换为以分钟为单位
+    util.to_minute(trainset_df, 'clickTime')
+    util.to_minute(trainset_df, 'conversionTime')
+    # 构造时间差
+    trainset_df['deltaTime_min'] = trainset_df['conversionTime_min'] - trainset_df['clickTime_min']
+    # 分析时间差的分布
+    distribution_deltaTime = trainset_df['deltaTime_min'].value_counts()
+    distribution_deltaTime.sort_index(inplace=True)
+    distribution_deltaTime_df = DataFrame(distribution_deltaTime)
+    distribution_deltaTime_df.reset_index(inplace=True)
+    distribution_deltaTime_df.columns = ['deltaTime_min', 'num']
+    del distribution_deltaTime
+    gc.collect()
+    # 提取回流率与时间差大小的关系
+    distribution_deltaTime_df['ratio'] = distribution_deltaTime_df['num'] / distribution_deltaTime_df['num'].sum()
+    distribution_deltaTime_df['ratio_cumsum'] = distribution_deltaTime_df['ratio'].cumsum()
+    """
+    如何从这个表中获取样本的置信度  
+    1. testset_ol 中样本的置信度都为1
+    2. 所有正样本的置信度都为1
+    3. 训练集中负样本的置信度与距302359的分钟时间差有关系。
+       - 距离截止时间7153分钟以上的样本置信度为1；
+       - 7153分钟以内的，根据距302359的分钟时间差deltaTime_min在上表中查询。
+    """
+
+    # 提取 confidence_df
+    distribution_deltaTime_df['deltaTime_min'] = distribution_deltaTime_df['deltaTime_min'].astype(int, copy=False)
+    distribution_deltaTime_df.set_index('deltaTime_min', inplace=True)
+
+    new_index = list(range(distribution_deltaTime_df.index.max() + 1))
+    confidence = distribution_deltaTime_df['ratio_cumsum'].reindex(new_index, method='ffill')
+
+    confidence.rename('confidence', inplace=True)
+    confidence.index.name = 'delta_deadline_min'
+    confidence_df = confidence.reset_index()
+
+    # 获取最后五天样本的置信度
+    trainset_df['delta_deadline_min'] = 30 * 24 * 60 + 23 * 60 + 59 - trainset_df['clickTime_min']
+    trainset_df = trainset_df.merge(confidence_df, how='left', on='delta_deadline_min')
+
+    # 所有正样本的置信度都为1, 距离截止时间7153分钟以上的样本置信度为1
+    indexer = (trainset_df['label'] == 1) | (trainset_df['delta_deadline_min'] > 7153)
+    trainset_df.loc[indexer, 'confidence'] = 1
+
+    # 删除多余的列
+    del trainset_df['clickTime_min']
+    del trainset_df['conversionTime_min']
+    del trainset_df['deltaTime_min']
+    del trainset_df['delta_deadline_min']
+
+    return trainset_df
+
+
+def f_confidence_testset_ol(testset_ol):
+    """
+        为 testset_ol 构造样本的置信度特征。
+    """
+    testset_ol['confidence'] = 1
+    return testset_ol
+
 
 def f_count_ratio():
     """
@@ -481,6 +546,7 @@ def f_conversion_ratio():
     trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
 
     # 安全的将 hdf_numeric_features_set 清空, 以避免可能的重复添加
+    # 注意与其他也使用 hdf_numeric_features_set 的代码的先后顺序！！！
     util.safe_remove(path_intermediate_dataset + hdf_numeric_features_set)
     # 遍历数据集中的有效特征
     for c in trainset_df.columns:
@@ -576,6 +642,12 @@ def fg_dataset(hdf_out, hdf_in):
     del userID_appID
     gc.collect()
 
+    # 添加样本的置信度特征
+    if 'train' in hdf_in:
+        dataset_df = f_confidence_trainset(trainset_df=dataset_df)
+    elif 'test' in hdf_in:
+        dataset_df = f_confidence_testset_ol(testset_ol=dataset_df)
+
     # 删除不匹配的列
     for c in columns_set_mismatch:
         del dataset_df[c]
@@ -591,7 +663,6 @@ def fg_dataset(hdf_out, hdf_in):
     # 检查缺失值
     if util.check_null(dataset_df):
         gc.collect()
-        return
     else:
         print('通过缺失值检查，不存在缺失值。')
 

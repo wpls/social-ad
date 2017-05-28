@@ -33,7 +33,7 @@ def one_hot():
     # 区分出类别特征
     numeric_features_s = pd.read_hdf(path_intermediate_dataset + hdf_numeric_features_set)
     numeric_features_set = set(numeric_features_s)
-    categorical_features = ~trainset_df.columns.isin(numeric_features_set)
+    categorical_features = ~trainset_df.columns.isin(numeric_features_set | numeric_features_static_set)
 
     # X
     from sklearn.preprocessing import OneHotEncoder
@@ -120,7 +120,13 @@ def tuning_hyper_parameters():
     alphas = np.logspace(-7, -1, 7)
     param_grid = {'alpha': alphas}
     generator = tscv.split(X_train)
-    clf = GridSearchCV(SGDClassifier(loss='log', penalty='l1', n_jobs=-1), param_grid, cv=generator, scoring=loss, n_jobs=-1)
+    clf = GridSearchCV(
+        SGDClassifier(loss='log', n_jobs=-1),
+        param_grid,
+        cv=generator,
+        scoring=loss,
+        n_jobs=-1
+    )
 
     # 训练模型
     clf.fit(X_train, y_train)
