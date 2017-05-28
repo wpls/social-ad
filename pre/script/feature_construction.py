@@ -703,6 +703,10 @@ def fg_dataset(hdf_out, hdf_in):
     # elif 'test' in hdf_in:
     #     dataset_df = f_confidence_testset_ol(testset_ol=dataset_df)
 
+    # 将地理位置调整到省级
+    dataset_df['hometown'] = (dataset_df['hometown'] / 100).astype(int)
+    dataset_df['residence'] = (dataset_df['residence'] / 100).astype(int)
+
     if 'train' in hdf_in:
         # 舍弃后一个小时的样本
         dataset_df = dataset_df.loc[(dataset_df['clickTime'] < 302300)]

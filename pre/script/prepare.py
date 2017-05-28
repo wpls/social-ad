@@ -142,9 +142,9 @@ def user():
     in_file = path_original_dataset + csv_user
     user_df = pd.read_csv(in_file)
 
-    # 将地理位置调整到省级
-    user_df['hometown'] = (user_df['hometown'] / 100).astype(int)
-    user_df['residence'] = (user_df['residence'] / 100).astype(int)
+    # # 将地理位置调整到省级
+    # user_df['hometown'] = (user_df['hometown'] / 100).astype(int)
+    # user_df['residence'] = (user_df['residence'] / 100).astype(int)
 
     # 对 age 分段
     age_interval = [0, 1, 4, 14, 29, 44, 59, 74, 84]
