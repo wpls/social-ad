@@ -636,9 +636,11 @@ def fg_dataset(hdf_out, hdf_in):
     for c in dataset_df.columns:
         if c not in (columns_set_without_count_ratio | columns_set_mismatch):
             in_file = path_feature + 'f_conversion_ratio_' + c + '.h5'
-            count_ratio = pd.read_hdf(in_file)
-            dataset_df = dataset_df.merge(count_ratio, how='left', on=c)
-            del count_ratio
+            conversion_ratio = pd.read_hdf(in_file)
+            dataset_df = dataset_df.merge(conversion_ratio, how='left', on=c)
+            # 填充缺失值
+            dataset_df['conversion_ratio_' + c].fillna(0, inplace=True)
+            del conversion_ratio
             gc.collect()
 
     # 加载并添加用户的活跃度特征
@@ -704,8 +706,13 @@ def fg_dataset(hdf_out, hdf_in):
     #     dataset_df = f_confidence_testset_ol(testset_ol=dataset_df)
 
     # 将地理位置调整到省级
+    # 放在这里的原因是：在构造转化率特征时，使用市级的地理位置信息而不是省级的。
     dataset_df['hometown'] = (dataset_df['hometown'] / 100).astype(int)
     dataset_df['residence'] = (dataset_df['residence'] / 100).astype(int)
+
+    # 为了在构造转化率特征时，使用完整的年龄信息而不是年龄段信息。所有到这里才给age分段
+    age_interval = [0, 1, 4, 14, 29, 44, 59, 74, 84]
+    dataset_df['age'] = pd.cut(dataset_df['age'], age_interval, right=False, include_lowest=True, labels=False)
 
     if 'train' in hdf_in:
         # 舍弃后一个小时的样本
