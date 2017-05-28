@@ -517,6 +517,54 @@ def f_confidence_testset_ol(testset_ol):
     return testset_ol
 
 
+def f_is_installed_from_action_trainset(trainset_df):
+    """
+    根据 action 数据构造 fn_is_installed 特征。
+    :param trainset_df:
+    :return:
+    """
+
+    action_df = pd.read_hdf(path_intermediate_dataset + hdf_action)
+    action_df['userID_appID'] = util.elegant_pairing(action_df['userID'], action_df['appID'])
+
+    # 判断 trainset_df 中是否存在 userID_appID 列
+    if 'userID_appID' not in trainset_df.columns:
+        trainset_df['userID_appID'] = util.elegant_pairing(trainset_df['userID'], trainset_df['appID'])
+
+    # 合并
+    trainset_df = trainset_df.merge(action_df[['userID_appID', 'installTime']], how='left', on='userID_appID')
+
+    trainset_df[fn_is_installed] = trainset_df['clickTime'] > trainset_df['installTime']
+
+    del trainset_df['installTime']
+    del action_df
+    gc.collect()
+
+    return trainset_df
+
+
+def f_is_installed_from_action_testset_ol(testset_ol_df):
+    """
+    根据 action 数据构造 fn_is_installed 特征。
+    :param testset_ol_df:
+    :return:
+    """
+
+    action_df = pd.read_hdf(path_intermediate_dataset + hdf_action)
+    action_df['userID_appID'] = util.elegant_pairing(action_df['userID'], action_df['appID'])
+
+    # 判断 testset_ol_df 中是否存在 userID_appID 列
+    if 'userID_appID' not in testset_ol_df.columns:
+        testset_ol_df['userID_appID'] = util.elegant_pairing(testset_ol_df['userID'], testset_ol_df['appID'])
+
+    testset_ol_df[fn_is_installed] = testset_ol_df['userID_appID'].isin(action_df['userID_appID'])
+
+    del action_df
+    gc.collect()
+
+    return testset_ol_df
+
+
 def f_count_ratio():
     """
     为 hdf_datatset 中的特征构造 click_count, conversion_count, conversion_ratio 特征，并存储到硬盘。
@@ -594,7 +642,7 @@ def fg_dataset(hdf_out, hdf_in):
             gc.collect()
 
     # 加载并添加用户的活跃度特征
-    print('\n正在添加用户的活跃度特征……')
+    util.print_constructing_feature(fn_user_activity)
     dataset_df = util.add_feature(dataset_df, hdf_user_activity, f_user_activity)
     # 将 user_activity 的 NaN 填充为 5
     dataset_df[fn_user_activity].fillna(5, inplace=True)
@@ -607,6 +655,7 @@ def fg_dataset(hdf_out, hdf_in):
     # dataset_df[fn_is_pref_cat] = dataset_df['appCategory'] == dataset_df[fn_cat_pref]
 
     # 添加 app 的流行度特征
+    util.print_constructing_feature(fn_app_popularity)
     dataset_df = util.add_feature(dataset_df, hdf_app_popularity, f_app_popularity)
     # 将 app_popularity 离散化
     dataset_df[fn_app_popularity] = \
@@ -635,18 +684,28 @@ def fg_dataset(hdf_out, hdf_in):
         util.elegant_pairing(dataset_df['connectionType'], dataset_df['appCategory'])
 
     # 添加“该 userID_appID 是否已存在安装行为”的特征
-    dataset_df['userID-appID'] = util.elegant_pairing(dataset_df['userID'], dataset_df['appID'])
+    # 从 action 数据构造
+    if 'train' in hdf_in:
+        dataset_df = f_is_installed_from_action_trainset(dataset_df)
+    elif 'test' in hdf_in:
+        dataset_df = f_is_installed_from_action_testset_ol(dataset_df)
+    # 从 user_app 数据构造
+    # dataset_df['userID-appID'] = util.elegant_pairing(dataset_df['userID'], dataset_df['appID'])
     userID_appID = pd.read_hdf(path_intermediate_dataset + hdf_userID_appID_pair_installed)
-    dataset_df[fn_is_installed] = dataset_df['userID-appID'].isin(userID_appID)
-    del dataset_df['userID-appID']
+    dataset_df[fn_is_installed] |= dataset_df['userID_appID'].isin(userID_appID)
+    del dataset_df['userID_appID']
     del userID_appID
     gc.collect()
 
-    # 添加样本的置信度特征
+    # # 添加样本的置信度特征
+    # if 'train' in hdf_in:
+    #     dataset_df = f_confidence_trainset(trainset_df=dataset_df)
+    # elif 'test' in hdf_in:
+    #     dataset_df = f_confidence_testset_ol(testset_ol=dataset_df)
+
     if 'train' in hdf_in:
-        dataset_df = f_confidence_trainset(trainset_df=dataset_df)
-    elif 'test' in hdf_in:
-        dataset_df = f_confidence_testset_ol(testset_ol=dataset_df)
+        # 舍弃后一个小时的样本
+        dataset_df = dataset_df.loc[(dataset_df['clickTime'] < 302300)]
 
     # 删除不匹配的列
     for c in columns_set_mismatch:

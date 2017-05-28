@@ -34,6 +34,7 @@ def one_hot():
     numeric_features_s = pd.read_hdf(path_intermediate_dataset + hdf_numeric_features_set)
     numeric_features_set = set(numeric_features_s)
     categorical_features = ~trainset_df.columns.isin(numeric_features_set | numeric_features_static_set)
+    print('numeric_features: ', numeric_features_set | numeric_features_static_set)
 
     # X
     from sklearn.preprocessing import OneHotEncoder
@@ -117,11 +118,11 @@ def tuning_hyper_parameters():
     # GridSearch
     from sklearn.model_selection import GridSearchCV
     from sklearn.linear_model import SGDClassifier
-    alphas = np.logspace(-7, -1, 7)
+    alphas = np.logspace(-6, -2, 5)
     param_grid = {'alpha': alphas}
     generator = tscv.split(X_train)
     clf = GridSearchCV(
-        SGDClassifier(loss='log', n_jobs=-1),
+        SGDClassifier(loss='log', random_state=42, n_jobs=-1),
         param_grid,
         cv=generator,
         scoring=loss,
@@ -143,11 +144,6 @@ def tuning_hyper_parameters():
     print('cv results: ')
     print(cv_results_df)
 
-    # 手动释放内存
-    del X_train
-    del y_train
-    gc.collect()
-
     # # 加载测试集
     # X_test = load_npz(path_modeling_dataset + npz_X_test)
     # y_test = np.load(path_modeling_dataset + npy_y_test)
@@ -159,8 +155,18 @@ def tuning_hyper_parameters():
     # del y_test
     # gc.collect()
 
-    # 存储模型
+    # 存储模型, 方式一
     util.safe_save(path_model, 'sgd_lr.pkl', clf.best_estimator_)
+
+    # # 以最佳参数在完整的数据集上重新训练， 方式二
+    # best_clf = SGDClassifier(loss='log', alpha=clf.best_params_['alpha'], random_state=42, n_jobs=-1)
+    # best_clf.fit(X_train, y_train)
+    # util.safe_save(path_model, 'sgd_lr.pkl', best_clf)
+
+    # 手动释放内存
+    del X_train
+    del y_train
+    gc.collect()
 
     # 停止计时，并打印相关信息
     util.print_stop(start)

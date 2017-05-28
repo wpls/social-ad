@@ -241,13 +241,14 @@ def userID_appID_pair_installed():
     del user_app_df
     gc.collect()
 
-    # 从 action 中提取出已经发生安装行为的 'userID_appID' 对
-    action_df = pd.read_hdf(path_intermediate_dataset + hdf_action)
-    indexer = action_df['userID'].isin(userID_set) & action_df['appID'].isin(appID_set)
-    userID_appID_set |= set(util.elegant_pairing(action_df.loc[indexer, 'userID'],
-                                                 action_df.loc[indexer, 'appID']))
-    del action_df
-    gc.collect()
+    # 注：不能从action中直接提取，因为还与时间有关系
+    # # 从 action 中提取出已经发生安装行为的 'userID_appID' 对
+    # action_df = pd.read_hdf(path_intermediate_dataset + hdf_action)
+    # indexer = action_df['userID'].isin(userID_set) & action_df['appID'].isin(appID_set)
+    # userID_appID_set |= set(util.elegant_pairing(action_df.loc[indexer, 'userID'],
+    #                                              action_df.loc[indexer, 'appID']))
+    # del action_df
+    # gc.collect()
 
     # 通过 list 转换为 Series 以存为 hdf5 格式
     util.safe_save(path_intermediate_dataset, hdf_userID_appID_pair_installed, Series(list(userID_appID_set)))

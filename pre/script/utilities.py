@@ -63,13 +63,13 @@ def safe_save(path, file_name, obj):
 
 def print_start(file_name):
     start = time()
-    print('\nStart calculating ' + file_name + ' ……')
+    print('\nStart calculating ' + file_name + '...')
     return start
 
 
 def print_stop(start):
     print('The calculation is complete.')
-    print('time used = {0:.0f} s'.format(time() - start))
+    print('time used = {0:.2f} s'.format(time() - start))
 
 
 def elegant_pairing(s1, s2):
@@ -377,3 +377,11 @@ def to_minute(df, column):
     hour = np.floor(df.loc[indexer, column] / 100) % 100
     minute = df.loc[indexer, column] % 100
     df.loc[indexer, column + '_min'] = day * 24 * 60 + hour * 60 + minute
+
+
+def print_constructing_feature(fn_feature):
+    """
+    打印正在构造的特征的信息。
+    :return:
+    """
+    print('Constructing feature: {0}...'.format(fn_feature))
