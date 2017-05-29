@@ -650,15 +650,18 @@ def fg_dataset(hdf_out, hdf_in):
     # 去掉 hometown
     del dataset_df['hometown']
 
+    # 构造是否 is_wifi 特征
+    dataset_df[fn_is_wifi] = dataset_df['connectionType'] == 1
+
     # 为了在构造转化率特征时，使用完整的年龄信息而不是年龄段信息。所以到这里才给age分段
     age_interval = [0, 1, 4, 14, 29, 44, 59, 74, 84]
     dataset_df['age'] = pd.cut(dataset_df['age'], age_interval, right=False, include_lowest=True, labels=False)
 
-    # 加载并添加用户的活跃度特征
-    util.print_constructing_feature(fn_user_activity)
-    dataset_df = util.add_feature(dataset_df, hdf_user_activity, f_user_activity)
-    # 将 user_activity 的 NaN 填充为 5
-    dataset_df[fn_user_activity].fillna(5, inplace=True)
+    # # 加载并添加用户的活跃度特征
+    # util.print_constructing_feature(fn_user_activity)
+    # dataset_df = util.add_feature(dataset_df, hdf_user_activity, f_user_activity)
+    # # 将 user_activity 的 NaN 填充为 5
+    # dataset_df[fn_user_activity].fillna(5, inplace=True)
 
     # 加载并添加用户对app的品类偏好特征
     dataset_df = util.add_feature(dataset_df, hdf_user_pref_cat, f_user_pref_cat)
@@ -685,8 +688,8 @@ def fg_dataset(hdf_out, hdf_in):
         util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['connectionType'])
     dataset_df[fn_residence_connectionType] = \
         util.elegant_pairing(dataset_df['residence'], dataset_df['connectionType'])
-    dataset_df[fn_appID_connectionType] = \
-        util.elegant_pairing(dataset_df['appID'], dataset_df['connectionType'])
+    dataset_df[fn_appID_is_wifi] = \
+        util.elegant_pairing(dataset_df['appID'], dataset_df[fn_is_wifi])
 
     # 添加二次组合特征 user-appCategory
     dataset_df[fn_age_appCategory] = util.elegant_pairing(dataset_df['age'], dataset_df['appCategory'])
@@ -720,13 +723,14 @@ def fg_dataset(hdf_out, hdf_in):
     # elif 'test' in hdf_in:
     #     dataset_df = f_confidence_testset_ol(testset_ol=dataset_df)
 
-    if 'train' in hdf_in:
-        # 舍弃后一个小时的样本
-        dataset_df = dataset_df.loc[(dataset_df['clickTime'] < 302300)]
+    # if 'train' in hdf_in:
+    #     # 舍弃后一个小时的样本
+    #     dataset_df = dataset_df.loc[(dataset_df['clickTime'] < 302300)]
 
     # 删除不匹配的列
-    for c in columns_set_mismatch:
-        del dataset_df[c]
+    for c in columns_set_mismatch | columns_set_inapparent:
+        if c in dataset_df.columns:
+            del dataset_df[c]
 
     # 准备存储，删除它们以避免干扰 one-hot    
     del dataset_df['clickTime']
@@ -744,6 +748,10 @@ def fg_dataset(hdf_out, hdf_in):
 
     # 存储
     util.safe_save(path_feature, hdf_out, dataset_df)
+
+    # # 打印每个特征的样本比例
+    # if 'train' in hdf_in:
+    #     util.print_sample_ratio(dataset_df)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)

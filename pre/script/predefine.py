@@ -55,6 +55,7 @@ hdf_week = 'f_week.h5'
 hdf_userID = 'f_userID.h5'
 
 # 特征名字 fn: feature name
+fn_is_wifi = 'is_wifi'
 fn_user_activity = 'user_activity'
 fn_is_installed = 'is_installed'
 fn_app_popularity = 'app_popularity'
@@ -66,6 +67,7 @@ fn_marriageStatus_connectionType = 'marriageStatus_connectionType'
 fn_residence_connectionType = 'residence_connectionType'
 fn_appCategory_connectionType = 'appCategory_connectionType'
 fn_appID_connectionType = 'appID_connectionType'
+fn_appID_is_wifi = 'appID_is_wifi'
 
 fn_age_appCategory = 'age_appCategory'
 fn_gender_appCategory = 'gender_appCategory'
@@ -111,6 +113,17 @@ columns_set_discarded = {
     'positionType',
     'haveBaby',
     'education'
+}
+
+columns_set_inapparent = {
+    'marriageStatus',
+    'appPlatform',
+    'hour',
+    'week',
+    'conversion_ratio_marriageStatus',
+    'conversion_ratio_hour',
+    'conversion_ratio_week',
+    'user_activity'
 }
 
 # 特征群文件

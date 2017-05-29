@@ -385,3 +385,27 @@ def print_constructing_feature(fn_feature):
     :return:
     """
     print('Constructing feature: {0}...'.format(fn_feature))
+
+
+def print_sample_ratio(df):
+    """
+    打印负正样本比例。
+    :param df:
+    :return:
+    """
+
+    for c in df.columns:
+        if c not in columns_set_without_count_ratio:
+            d = {}
+            key_set = set(df[c].values)
+            for key in key_set:
+                sample_num_negative = df.loc[(df['label'] != 1) & (df[c] == key)].index.size
+                sample_num_positive = df.loc[(df['label'] == 1) & (df[c] == key)].index.size
+                if sample_num_positive != 0:
+                    sample_ratio = int(sample_num_negative / sample_num_positive)
+                else:
+                    sample_ratio = pd.NaT
+                d[c + '_' + str(key)] = sample_ratio
+            res = DataFrame(d, index=['sample_ratio'])
+            print(res)
+            # print("sample ratio of '{0}': {1}".format(c, int(sample_num_negative / sample_num_positive)))
