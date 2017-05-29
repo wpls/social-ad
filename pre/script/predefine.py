@@ -62,8 +62,10 @@ fn_app_popularity = 'app_popularity'
 fn_age_connectionType = 'age_connectionType'
 fn_gender_connectionType = 'gender_connectionType'
 fn_education_connectionType = 'education_connectionType'
+fn_marriageStatus_connectionType = 'marriageStatus_connectionType'
 fn_residence_connectionType = 'residence_connectionType'
 fn_appCategory_connectionType = 'appCategory_connectionType'
+fn_appID_connectionType = 'appID_connectionType'
 
 fn_age_appCategory = 'age_appCategory'
 fn_gender_appCategory = 'gender_appCategory'
@@ -104,14 +106,12 @@ columns_set_mismatch = {
     'positionID',
     'userID'
 }
-# # 舍弃的列，因为无法做one-hot
-# columns_set_discarded = {
-#     'camgaignID',
-#     'adID',
-#     'creativeID',
-#     'positionID',
-#     'userID'
-# }
+# 不构造转化率的列
+columns_set_discarded = {
+    'positionType',
+    'haveBaby',
+    'education'
+}
 
 # 特征群文件
 hdf_context_dataset_fg = 'fg_context_dataset.h5'

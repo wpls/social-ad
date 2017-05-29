@@ -634,7 +634,7 @@ def fg_dataset(hdf_out, hdf_in):
 
     # 为每个有效特征添加对应的 conversion_ratio 特征
     for c in dataset_df.columns:
-        if c not in (columns_set_without_count_ratio | columns_set_mismatch):
+        if c not in (columns_set_without_count_ratio | columns_set_mismatch | columns_set_discarded):
             in_file = path_feature + 'f_conversion_ratio_' + c + '.h5'
             conversion_ratio = pd.read_hdf(in_file)
             dataset_df = dataset_df.merge(conversion_ratio, how='left', on=c)
@@ -643,18 +643,29 @@ def fg_dataset(hdf_out, hdf_in):
             del conversion_ratio
             gc.collect()
 
+    # 将地理位置调整到省级
+    # 放在这里的原因是：在构造转化率特征时，使用市级的地理位置信息而不是省级的。
+    # dataset_df['hometown'] = (dataset_df['hometown'] / 100).astype(int)
+    # dataset_df['residence'] = (dataset_df['residence'] / 100).astype(int)
+    # 去掉 hometown
+    del dataset_df['hometown']
+
+    # 为了在构造转化率特征时，使用完整的年龄信息而不是年龄段信息。所以到这里才给age分段
+    age_interval = [0, 1, 4, 14, 29, 44, 59, 74, 84]
+    dataset_df['age'] = pd.cut(dataset_df['age'], age_interval, right=False, include_lowest=True, labels=False)
+
     # 加载并添加用户的活跃度特征
     util.print_constructing_feature(fn_user_activity)
     dataset_df = util.add_feature(dataset_df, hdf_user_activity, f_user_activity)
     # 将 user_activity 的 NaN 填充为 5
     dataset_df[fn_user_activity].fillna(5, inplace=True)
 
-    # # 加载并添加用户对app的品类偏好特征
-    # dataset_df = util.add_feature(dataset_df, hdf_user_pref_cat, f_user_pref_cat)
-    # # 将 cat_pref 的 NaN 填充为 0
-    # dataset_df[fn_cat_pref].fillna(0, inplace=True)
-    # # 同时构造 is_pref_cat 特征
-    # dataset_df[fn_is_pref_cat] = dataset_df['appCategory'] == dataset_df[fn_cat_pref]
+    # 加载并添加用户对app的品类偏好特征
+    dataset_df = util.add_feature(dataset_df, hdf_user_pref_cat, f_user_pref_cat)
+    # 将 cat_pref 的 NaN 填充为 0
+    dataset_df[fn_cat_pref].fillna(0, inplace=True)
+    # 同时构造 is_pref_cat 特征
+    dataset_df[fn_is_pref_cat] = dataset_df['appCategory'] == dataset_df[fn_cat_pref]
 
     # 添加 app 的流行度特征
     util.print_constructing_feature(fn_app_popularity)
@@ -670,15 +681,19 @@ def fg_dataset(hdf_out, hdf_in):
     dataset_df[fn_gender_connectionType] = util.elegant_pairing(dataset_df['gender'], dataset_df['connectionType'])
     dataset_df[fn_education_connectionType] = \
         util.elegant_pairing(dataset_df['education'], dataset_df['connectionType'])
+    dataset_df[fn_marriageStatus_connectionType] = \
+        util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['connectionType'])
     dataset_df[fn_residence_connectionType] = \
         util.elegant_pairing(dataset_df['residence'], dataset_df['connectionType'])
+    dataset_df[fn_appID_connectionType] = \
+        util.elegant_pairing(dataset_df['appID'], dataset_df['connectionType'])
 
     # 添加二次组合特征 user-appCategory
     dataset_df[fn_age_appCategory] = util.elegant_pairing(dataset_df['age'], dataset_df['appCategory'])
     dataset_df[fn_gender_appCategory] = util.elegant_pairing(dataset_df['gender'], dataset_df['appCategory'])
     dataset_df[fn_education_appCategory] = util.elegant_pairing(dataset_df['education'], dataset_df['appCategory'])
-    dataset_df[fn_marriageStatus_appCategory] = \
-        util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['appCategory'])
+    # dataset_df[fn_marriageStatus_appCategory] = \
+    #     util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['appCategory'])
     dataset_df[fn_haveBaby_appCategory] = util.elegant_pairing(dataset_df['haveBaby'], dataset_df['appCategory'])
 
     # 添加 connectionType-appCategory
@@ -704,15 +719,6 @@ def fg_dataset(hdf_out, hdf_in):
     #     dataset_df = f_confidence_trainset(trainset_df=dataset_df)
     # elif 'test' in hdf_in:
     #     dataset_df = f_confidence_testset_ol(testset_ol=dataset_df)
-
-    # 将地理位置调整到省级
-    # 放在这里的原因是：在构造转化率特征时，使用市级的地理位置信息而不是省级的。
-    dataset_df['hometown'] = (dataset_df['hometown'] / 100).astype(int)
-    dataset_df['residence'] = (dataset_df['residence'] / 100).astype(int)
-
-    # 为了在构造转化率特征时，使用完整的年龄信息而不是年龄段信息。所有到这里才给age分段
-    age_interval = [0, 1, 4, 14, 29, 44, 59, 74, 84]
-    dataset_df['age'] = pd.cut(dataset_df['age'], age_interval, right=False, include_lowest=True, labels=False)
 
     if 'train' in hdf_in:
         # 舍弃后一个小时的样本
@@ -816,4 +822,4 @@ def construct_feature():
     fg_trainset()
     fg_testset_ol()
 
-    print('\nThe total time spent on constructing feature: {0:.0f} s'.format(time() - start))
+    print('\nThe total time spent on constructing feature: {0:.2f} s'.format(time() - start))

@@ -243,3 +243,47 @@ def predict_test_ol():
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
+
+
+def predict_test_ol_xgb():
+    # 开始计时，并打印相关信息
+    start = time()
+    print('\nStart predicting test_ol')
+
+    # 加载 test_ol
+    test_ol = pd.read_hdf(path_intermediate_dataset + hdf_test_ol)
+    # # 加载 ad
+    # ad = pd.read_hdf(path_intermediate_dataset + hdf_ad)
+    # # 合并表格
+    # test_ol = test_ol.merge(ad[['creativeID', 'appID']], how='left', on='creativeID')
+    # # 构造 'userID-appID' 列
+    # test_ol['userID-appID'] = test_ol['userID'].astype(str) + '-' + test_ol['appID'].astype(str)
+    # # 加载已经有安装行为的 'userID-appID'
+    # userID_appID_test = pd.read_hdf(path_intermediate_dataset + 'userID_appID_for_test.h5')
+
+    # 加载 X_test_ol 和 model
+    X_test_ol = pd.read_hdf(path_feature + hdf_testset_ol_fg).values
+    clf = joblib.load(path_model + 'xgb.pkl')
+
+    # 预测
+    y_test_ol = clf.predict_proba(X_test_ol)
+
+    # 生成提交数据集
+    # submission = test_ol[['instanceID', 'label', 'userID-appID']].copy()
+    submission = test_ol[['instanceID', 'label']].copy()
+    submission.rename(columns={'label': 'prob'}, inplace=True)
+    submission['prob'] = y_test_ol[:, 1]
+    submission.set_index('instanceID', inplace=True)
+    submission.sort_index(inplace=True)
+
+    # # 对于那些已经有安装行为的 'userID-appID', 应该都预测为0
+    # submission.loc[submission['userID-appID'].isin(userID_appID_test), 'prob'] = 0
+    # # 删除 userID-appID 列
+    # del submission['userID-appID']
+
+    # 生成提交的压缩文件
+    util.safe_save(path_submission_dataset, csv_submission, submission)
+
+    # 停止计时，并打印相关信息
+    util.print_stop(start)
+
