@@ -557,9 +557,44 @@ def f_is_installed_from_action_testset_ol(testset_ol_df):
     if 'userID_appID' not in testset_ol_df.columns:
         testset_ol_df['userID_appID'] = util.elegant_pairing(testset_ol_df['userID'], testset_ol_df['appID'])
 
-    testset_ol_df[fn_is_installed] = testset_ol_df['userID_appID'].isin(action_df['userID_appID'])
+    if fn_is_installed not in testset_ol_df.columns:
+        testset_ol_df[fn_is_installed] = testset_ol_df['userID_appID'].isin(action_df['userID_appID'])
+    else:
+        testset_ol_df[fn_is_installed] |= testset_ol_df['userID_appID'].isin(action_df['userID_appID'])
 
     del action_df
+    gc.collect()
+
+    return testset_ol_df
+
+
+def f_is_installed_from_trainset_testset_ol(testset_ol_df):
+    """
+    根据 trainset 数据构造 fn_is_installed 特征。
+    :param testset_ol_df:
+    :return:
+    """
+
+    trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+
+    indexer_positive = trainset_df['label'] == 1
+    if 'userID_appID' not in trainset_df.columns:
+        userID_appID_arr = util.elegant_pairing(
+            trainset_df.loc[indexer_positive, 'userID'],
+            trainset_df.loc[indexer_positive, 'appID'])
+    else:
+        userID_appID_arr = trainset_df.loc[indexer_positive, 'userID_appID']
+
+    # 判断 testset_ol_df 中是否存在 userID_appID 列
+    if 'userID_appID' not in testset_ol_df.columns:
+        testset_ol_df['userID_appID'] = util.elegant_pairing(testset_ol_df['userID'], testset_ol_df['appID'])
+
+    if fn_is_installed not in testset_ol_df.columns:
+        testset_ol_df[fn_is_installed] = testset_ol_df['userID_appID'].isin(userID_appID_arr)
+    else:
+        testset_ol_df[fn_is_installed] |= testset_ol_df['userID_appID'].isin(userID_appID_arr)
+
+    del trainset_df
     gc.collect()
 
     return testset_ol_df
@@ -709,10 +744,15 @@ def fg_dataset(hdf_out, hdf_in):
         dataset_df = f_is_installed_from_action_trainset(dataset_df)
     elif 'test' in hdf_in:
         dataset_df = f_is_installed_from_action_testset_ol(dataset_df)
+        dataset_df = f_is_installed_from_trainset_testset_ol(dataset_df)
     # 从 user_app 数据构造
-    # dataset_df['userID-appID'] = util.elegant_pairing(dataset_df['userID'], dataset_df['appID'])
+    if 'userID_appID' not in dataset_df.columns:
+        dataset_df['userID_appID'] = util.elegant_pairing(dataset_df['userID'], dataset_df['appID'])
     userID_appID = pd.read_hdf(path_intermediate_dataset + hdf_userID_appID_pair_installed)
-    dataset_df[fn_is_installed] |= dataset_df['userID_appID'].isin(userID_appID)
+    if fn_is_installed not in dataset_df.columns:
+        dataset_df[fn_is_installed] = dataset_df['userID_appID'].isin(userID_appID)
+    else:
+        dataset_df[fn_is_installed] |= dataset_df['userID_appID'].isin(userID_appID)
     del dataset_df['userID_appID']
     del userID_appID
     gc.collect()
