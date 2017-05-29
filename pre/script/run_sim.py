@@ -12,7 +12,7 @@ fc.construct_feature()
 md.one_hot()
 
 md.tuning_hyper_parameters_sim()
-md.predict_test_ol()
+md.predict_test_ol_lr()
 
 print('Running complete.')
 print('\nThe total time : {0:.0f} s'.format(time() - start))

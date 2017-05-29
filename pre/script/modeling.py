@@ -202,7 +202,7 @@ def tuning_hyper_parameters_sim():
     util.print_stop(start)
 
 
-def predict_test_ol():
+def predict_test_ol_lr():
     # 开始计时，并打印相关信息
     start = time()
     print('\nStart predicting test_ol')
@@ -239,7 +239,7 @@ def predict_test_ol():
     # del submission['userID-appID']
 
     # 生成提交的压缩文件
-    util.safe_save(path_submission_dataset, csv_submission, submission)
+    util.safe_save(path_submission_dataset, csv_submission_lr, submission)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
@@ -282,8 +282,33 @@ def predict_test_ol_xgb():
     # del submission['userID-appID']
 
     # 生成提交的压缩文件
-    util.safe_save(path_submission_dataset, csv_submission, submission)
+    util.safe_save(path_submission_dataset, csv_submission_xgb, submission)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
+
+
+def predict_average():
+    """
+    对 lr 的预测和 xgb 的预测做平均。
+    :return:
+    """
+
+    # 开始计时，并打印相关信息
+    start = time()
+    print('\n对 lr 的预测和 xgb 的预测做平均。')
+
+    submission_lr_series = pd.read_csv(path_submission_dataset + csv_submission_lr)
+    submission_xgb_series = pd.read_csv(path_submission_dataset + csv_submission_xgb)
+
+    submission_avg_series = (submission_lr_series + submission_xgb_series) / 2
+    submission_avg_series['instanceID'] = submission_avg_series['instanceID'].astype(int)
+    submission_avg_series.set_index('instanceID', inplace=True)
+
+    util.safe_save(path_submission_dataset, csv_submission_avg, submission_avg_series)
+
+    # 停止计时，并打印相关信息
+    util.print_stop(start)
+
+
 

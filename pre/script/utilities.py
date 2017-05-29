@@ -53,7 +53,7 @@ def safe_save(path, file_name, obj):
         zip_file = zipfile.ZipFile(path + name + '.zip', 'w')
         zip_file.write(
             out_file,
-            arcname=file_name,
+            arcname='submission.csv',
             compress_type=zipfile.ZIP_DEFLATED
         )
     # 手动释放内存

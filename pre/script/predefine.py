@@ -170,4 +170,7 @@ npz_X_test = 'X_test.npz'
 
 # 提交集
 csv_submission = 'submission.csv'
+csv_submission_lr = 'submission_lr.csv'
+csv_submission_xgb = 'submission_xgb.csv'
+csv_submission_avg = 'submission_avg.csv'
 
