@@ -231,7 +231,8 @@ def f_conversion_ratio(df, column):
     del count_ratio[conversion_count_column]
     del count_ratio[click_count_column]
 
-    # conversion_ratio 没有必要取对数，归一化
+    # conversion_ratio 没有必要取对数，但是要归一化
+    count_ratio[conversion_ratio_column] = min_max_scaling(count_ratio[conversion_ratio_column])
 
     # 存储
     safe_save(path_feature, hdf_out, count_ratio)
