@@ -102,7 +102,7 @@ def split_train_test(train_proportion=0.8):
 def tuning_hyper_parameters():
     # 开始计时，并打印相关信息
     start = time()
-    print('\nStart tuning hyper parameters')
+    print('\nStart tuning hyper parameters of lr')
 
     # 加载训练集
     # X_train = load_npz(path_modeling_dataset + npz_X_train)
@@ -202,6 +202,52 @@ def tuning_hyper_parameters_sim():
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
+
+
+def tuning_hyper_parameters_sim_xgb(train_proportion=0.8):
+    # 开始计时，并打印相关信息
+    start = time()
+    print('\nStart tuning hyper parameters of xgb_sim...')
+
+    # 加载训练集
+    trainset_df = pd.read_hdf(path_feature + 'fg_trainset.h5')
+
+    # 划分训练集和线下测试集
+    size = int(trainset_df.index.size * train_proportion)
+    boolean_indexer_column = trainset_df.columns == 'label'
+
+    y_train = trainset_df.loc[:size, boolean_indexer_column].values.ravel()
+    y_test = trainset_df.loc[size:, boolean_indexer_column].values.ravel()
+
+    X_train = trainset_df.loc[:size, ~boolean_indexer_column].values
+    X_test = trainset_df.loc[size:, ~boolean_indexer_column].values
+
+    del trainset_df
+    gc.collect()
+
+    # 训练模型
+    from xgboost import XGBClassifier
+    clf = XGBClassifier(n_estimators=300, reg_alpha=0.001, subsample=0.8, colsample_bytree=0.8)
+    clf.fit(X_train, y_train)
+
+    # 打印在训练集上的 logloss
+    from sklearn.metrics import log_loss
+    print('logloss in trainset: ', log_loss(y_train, clf.predict_proba(X_train)))
+    print('logloss in testset: ', log_loss(y_test, clf.predict_proba(X_test)))
+
+    # 手动释放内存
+    del X_train
+    del y_train
+    del X_test
+    del y_test
+    gc.collect()
+
+    # 存储模型
+    util.safe_save(path_model, 'xgb.pkl', clf)
+
+    # 停止计时，并打印相关信息
+    util.print_stop(start)
+
 
 
 def predict_test_ol_lr():
