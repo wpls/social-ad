@@ -46,6 +46,7 @@ hdf_user_pref_cat = 'f_user_pref_cat.h5'
 hdf_user_cat_weight = 'f_user_cat_weight.h5'
 hdf_app_popularity = 'f_app_popularity.h5'
 hdf_user_activity = 'f_user_activity.h5'
+hdf_user_activity_cat = 'f_user_activity_cat.h5'
 
 hdf_hour_weight = 'f_hour_weight.h5'
 hdf_conversion_ratio_connectionType = 'f_conversion_ratio_connectionType.h5'
@@ -58,6 +59,7 @@ hdf_userID = 'f_userID.h5'
 # 特征名字 fn: feature name
 fn_is_not_wifi = 'is_not_wifi'
 fn_user_activity = 'user_activity'
+fn_user_activity_cat = 'user_activity_cat'
 fn_is_installed = 'is_installed'
 fn_app_popularity = 'app_popularity'
 
@@ -67,6 +69,7 @@ fn_education_connectionType = 'education_connectionType'
 fn_marriageStatus_connectionType = 'marriageStatus_connectionType'
 fn_residence_connectionType = 'residence_connectionType'
 fn_appCategory_connectionType = 'appCategory_connectionType'
+fn_connectionType_telecomsOperator = 'connectionType_telecomsOperator'
 fn_appID_connectionType = 'appID_connectionType'
 fn_appID_is_wifi = 'appID_is_wifi'
 
@@ -117,12 +120,18 @@ columns_set_mismatch = {
     'userID'
 }
 # 不构造转化率的列
-columns_set_discarded = {
+columns_set_without_conversion_ratio = {
     'positionType',
     'haveBaby',
     'education'
 }
-
+columns_set_useless = {
+    'label',
+    'clickTime',
+    'conversionTime',
+    'instanceID'
+}
+# 不能明显有助于分类的列
 columns_set_inapparent = {
     'marriageStatus',
     'appPlatform',
@@ -131,7 +140,8 @@ columns_set_inapparent = {
     'conversion_ratio_marriageStatus',
     'conversion_ratio_hour',
     'conversion_ratio_week',
-    'user_activity'
+    'user_activity',
+    'age'
 }
 
 # 特征群文件

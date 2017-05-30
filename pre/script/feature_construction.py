@@ -110,31 +110,62 @@ def fg_ad():
 
 # ========== feature construction user ==========
 
-def f_user_activity():
-    out_file = path_feature + hdf_user_activity
+# 回头还可以进一步修改，使其刻画得更加精细
+def f_user_activity_cat():
+    """
+    提取 user_activity 并重新分类。
+    :return:
+    """
+
+    out_file = path_feature + hdf_user_activity_cat
     if util.is_exist(out_file):
         return
 
     # 开始计时，并打印相关信息
-    start = util.print_start(hdf_user_activity)
+    start = util.print_start(hdf_user_activity_cat)
 
     # 提取用户的活跃度特征
-    user_app = pd.read_hdf(path_intermediate_dataset + hdf_user_app)
-    user_activity = user_app.groupby('userID').count()
-    user_activity.rename(columns={'appID': fn_user_activity}, inplace=True)
+    user_app_df = pd.read_hdf(path_intermediate_dataset + hdf_user_app)
+    user_activity_df = user_app_df.groupby('userID', as_index=False).count()
+    user_activity_df.rename(columns={'appID': fn_user_activity}, inplace=True)
 
     # 手动释放内存
-    del user_app
+    del user_app_df
     gc.collect()
 
-    # 离散化
-    interval = np.ceil(np.logspace(0, 3, 6))
-    user_activity[fn_user_activity] = \
-        pd.cut(user_activity[fn_user_activity], interval, include_lowest=True, labels=False)
-    user_activity.reset_index(inplace=True)
+    # 加载 hdf_trainset
+    trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+    # 添加 fn_user_activity
+    trainset_df = trainset_df.merge(user_activity_df, how='left', on='userID')
+    # 将 user_activity 的 NaN 填充为 600, 因为 fn_user_activity 的最大值为 600
+    trainset_df[fn_user_activity].fillna(600, inplace=True)
+
+    # 获取特征每个取值的转化率
+    sample_ratio = util.get_sample_ratio(trainset_df, fn_user_activity)
+
+    cat_set_NaN = set(sample_ratio.loc[sample_ratio.isnull()].index)
+    cat_set_0_9 = set(sample_ratio.loc[(sample_ratio >= 0) & (sample_ratio <= 9)].index)
+    cat_set_10_19 = set(sample_ratio.loc[(sample_ratio >= 10) & (sample_ratio <= 19)].index)
+    cat_set_20_29 = set(sample_ratio.loc[(sample_ratio >= 20) & (sample_ratio <= 29)].index)
+    cat_set_30_49 = set(sample_ratio.loc[(sample_ratio >= 30) & (sample_ratio <= 49)].index)
+    cat_set_50 = set(sample_ratio.loc[sample_ratio >= 50].index)
+
+    # 重新分类
+    user_activity_df.loc[user_activity_df[fn_user_activity].isin(cat_set_NaN), fn_user_activity_cat] = 0
+    user_activity_df.loc[user_activity_df[fn_user_activity].isin(cat_set_0_9), fn_user_activity_cat] = 1
+    user_activity_df.loc[user_activity_df[fn_user_activity].isin(cat_set_10_19), fn_user_activity_cat] = 2
+    user_activity_df.loc[user_activity_df[fn_user_activity].isin(cat_set_20_29), fn_user_activity_cat] = 3
+    user_activity_df.loc[user_activity_df[fn_user_activity].isin(cat_set_30_49), fn_user_activity_cat] = 4
+    user_activity_df.loc[user_activity_df[fn_user_activity].isin(cat_set_50), fn_user_activity_cat] = 5
+    # 将 user_activity_df 的 NaN 填充为 4, 因为这个类别是一个无关紧要的类
+    user_activity_df[fn_user_activity_cat].fillna(4, inplace=True)
+
+    # 删除 fn_user_activity
+    del user_activity_df[fn_user_activity]
+    gc.collect()
 
     # 存储
-    util.safe_save(path_feature, hdf_user_activity, user_activity)
+    util.safe_save(path_feature, hdf_user_activity_cat, user_activity_df)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
@@ -308,6 +339,7 @@ def f_userID():
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
+
 
 """
 def fg_context(hdf_out, hdf_in):
@@ -669,55 +701,50 @@ def fg_dataset(hdf_out, hdf_in):
 
     # 为每个有效特征添加对应的 conversion_ratio 特征
     for c in dataset_df.columns:
-        if c not in (columns_set_without_count_ratio | columns_set_mismatch | columns_set_discarded):
-            in_file = path_feature + 'f_conversion_ratio_' + c + '.h5'
+        if c not in (columns_set_without_count_ratio | columns_set_mismatch | columns_set_without_conversion_ratio):
+            hdf_feature = 'f_conversion_ratio_' + c + '.h5'
+            fn_feature = 'conversion_ratio_' + c
+            # 打印进度信息
+            util.print_constructing_feature(fn_feature)
+
+            in_file = path_feature + hdf_feature
             conversion_ratio = pd.read_hdf(in_file)
             dataset_df = dataset_df.merge(conversion_ratio, how='left', on=c)
             # 填充缺失值
-            dataset_df['conversion_ratio_' + c].fillna(0, inplace=True)
+            dataset_df[fn_feature].fillna(0, inplace=True)
             del conversion_ratio
             gc.collect()
 
-    # 将地理位置调整到省级
-    # 放在这里的原因是：在构造转化率特征时，使用市级的地理位置信息而不是省级的。
-    # dataset_df['hometown'] = (dataset_df['hometown'] / 100).astype(int)
-    # dataset_df['residence'] = (dataset_df['residence'] / 100).astype(int)
-    # 去掉 hometown
-    del dataset_df['hometown']
-
-    # 构造是否 is_wifi 特征
+    # 构造是否 is_not_wifi 特征
+    util.print_constructing_feature(fn_is_not_wifi)
     dataset_df[fn_is_not_wifi] = dataset_df['connectionType'] != 1
     # 构造 is_child_old 特征
+    util.print_constructing_feature(fn_is_child_old)
     dataset_df[fn_is_child_old] = (dataset_df['age'] <= 10) | (dataset_df['age'] > 60)
 
-
-    # # 为了在构造转化率特征时，使用完整的年龄信息而不是年龄段信息。所以到这里才给age分段
-    # age_interval = [0, 1, 4, 14, 29, 44, 59, 74, 84]
-    # dataset_df['age'] = pd.cut(dataset_df['age'], age_interval, right=False, include_lowest=True, labels=False)
-
-    # # 加载并添加用户的活跃度特征
-    # util.print_constructing_feature(fn_user_activity)
-    # dataset_df = util.add_feature(dataset_df, hdf_user_activity, f_user_activity)
-    # # 将 user_activity 的 NaN 填充为 5
-    # dataset_df[fn_user_activity].fillna(5, inplace=True)
+    # 加载并添加用户的活跃度特征
+    util.print_constructing_feature(fn_user_activity_cat)
+    dataset_df = util.add_feature(dataset_df, hdf_user_activity_cat, f_user_activity_cat)
+    # 将 user_activity 的 NaN 填充为 4, 因为这是一个无关紧要的类
+    dataset_df[fn_user_activity_cat].fillna(4, inplace=True)
 
     # 加载并添加用户对app的品类偏好特征
     dataset_df = util.add_feature(dataset_df, hdf_user_pref_cat, f_user_pref_cat)
     # 将 cat_pref 的 NaN 填充为 0
     dataset_df[fn_cat_pref].fillna(0, inplace=True)
     # 同时构造 is_pref_cat 特征
+    util.print_constructing_feature(fn_is_pref_cat)
     dataset_df[fn_is_pref_cat] = dataset_df['appCategory'] == dataset_df[fn_cat_pref]
+    del dataset_df[fn_cat_pref]
 
     # 添加 app 的流行度特征
     util.print_constructing_feature(fn_app_popularity)
     dataset_df = util.add_feature(dataset_df, hdf_app_popularity, f_app_popularity)
-    # 将 app_popularity 离散化
-    dataset_df[fn_app_popularity] = \
-        pd.cut(dataset_df[fn_app_popularity], np.logspace(0, 7, num=8), include_lowest=True, labels=False)
-    # 将 app_popularity 的 NaN 填充为 6
-    dataset_df[fn_app_popularity].fillna(6, inplace=True)
+    # 将 app_popularity 的 NaN 填充为 6, 因为这是一个无关紧要的类（回头仔细想一下这种方式对不对）
+    dataset_df[fn_app_popularity].fillna(0, inplace=True)
 
     # 添加二次组合特征 user(age, gender, education, residence)-connectionType
+    util.print_constructing_feature('secondary combination feature')
     dataset_df[fn_age_connectionType] = util.elegant_pairing(dataset_df['age'], dataset_df['connectionType'])
     dataset_df[fn_gender_connectionType] = util.elegant_pairing(dataset_df['gender'], dataset_df['connectionType'])
     dataset_df[fn_education_connectionType] = \
@@ -741,7 +768,12 @@ def fg_dataset(hdf_out, hdf_in):
     dataset_df[fn_appCategory_connectionType] = \
         util.elegant_pairing(dataset_df['connectionType'], dataset_df['appCategory'])
 
+    # 添加 connectionType_telecomsOperator
+    dataset_df[fn_connectionType_telecomsOperator] = \
+        util.elegant_pairing(dataset_df['connectionType'], dataset_df['telecomsOperator'])
+
     # 添加“该 userID_appID 是否已存在安装行为”的特征
+    util.print_constructing_feature(fn_is_installed)
     # 从 action 数据构造
     if 'train' in hdf_in:
         dataset_df = f_is_installed_from_action_trainset(dataset_df)
@@ -766,31 +798,16 @@ def fg_dataset(hdf_out, hdf_in):
     # elif 'test' in hdf_in:
     #     dataset_df = f_confidence_testset_ol(testset_ol=dataset_df)
 
-    # if 'train' in hdf_in:
-    #     # 舍弃后一个小时的样本
-    #     dataset_df = dataset_df.loc[(dataset_df['clickTime'] < 302300)]
-
-    # 删除原始 age 特征
-    del dataset_df['age']
-
-    # 删除不匹配的列
-    for c in columns_set_mismatch | columns_set_inapparent:
+    # 删除不匹配的, 和不能明显有助于分类的列
+    for c in columns_set_mismatch | columns_set_inapparent | columns_set_useless:
         if c in dataset_df.columns:
             del dataset_df[c]
 
-    # 准备存储，删除它们以避免干扰 one-hot    
-    del dataset_df['clickTime']
-    if 'train' in hdf_in:
-        del dataset_df['conversionTime']
-    elif 'test' in hdf_in:
-        del dataset_df['label']
-        del dataset_df['instanceID']
-
     # 检查缺失值
-    if util.check_null(dataset_df):
+    if util.exist_null(dataset_df):
         gc.collect()
     else:
-        print('通过缺失值检查，不存在缺失值。')
+        print('Check passed, no missing value.')
 
     # 存储
     util.safe_save(path_feature, hdf_out, dataset_df)

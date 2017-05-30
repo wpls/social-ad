@@ -99,7 +99,7 @@ def split_train_test(train_proportion=0.8):
     util.print_stop(start)
 
 
-def tuning_hyper_parameters():
+def tuning_hyper_parameters_lr():
     # 开始计时，并打印相关信息
     start = time()
     print('\nStart tuning hyper parameters of lr')
@@ -255,9 +255,59 @@ def tuning_hyper_parameters_xgb(train_proportion=0.1):
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
-    
-    
-def tuning_hyper_parameters_sim_avg(train_proportion=0.8):
+
+
+def tuning_hyper_parameters_lr_sim(train_proportion=0.8):
+    # 开始计时，并打印相关信息
+    start = time()
+    print('\nStart tuning hyper parameters of lr_sim')
+
+    # 加载训练集
+    X = load_npz(path_modeling_dataset + npz_X).tocsr()
+    # 划分出训练集、测试集(注意不能随机划分)
+    train_size = int(np.shape(X)[0] * train_proportion)
+    test_size = int(np.shape(X)[0] * (train_proportion + 0.1))
+    # X_train
+    X_train = X[:train_size, :]
+    # X_test
+    X_test = X[train_size:test_size, :]
+    # 手动释放内存
+    del X
+
+    y = np.load(path_modeling_dataset + npy_y)
+    # y_train
+    y_train = y[:train_size]
+    # y_test
+    y_test = y[train_size:test_size]
+    # 手动释放内存
+    del y
+    gc.collect()
+
+    # 训练模型
+    from sklearn.linear_model import SGDClassifier
+    clf = SGDClassifier(loss='log', alpha=0.0001, n_jobs=-1)
+    clf.fit(X_train, y_train)
+
+    # 打印在训练集，测试集上的 logloss
+    from sklearn.metrics import log_loss
+    print('logloss in trainset: ', log_loss(y_train, clf.predict_proba(X_train)))
+    print('logloss in testset: ', log_loss(y_test, clf.predict_proba(X_test)))
+
+    # 手动释放内存
+    del X_train
+    del y_train
+    del X_test
+    del y_test
+    gc.collect()
+
+    # 存储模型
+    util.safe_save(path_model, 'sgd_lr.pkl', clf)
+
+    # 停止计时，并打印相关信息
+    util.print_stop(start)
+
+
+def tuning_hyper_parameters_lr_sim_avg(train_proportion=0.8):
     # 开始计时，并打印相关信息
     start = time()
     print('\nStart tuning hyper parameters of lr sim avg')
@@ -312,7 +362,7 @@ def tuning_hyper_parameters_sim_avg(train_proportion=0.8):
     util.print_stop(start)
 
 
-def tuning_hyper_parameters_sim_xgb(train_proportion=0.8):
+def tuning_hyper_parameters_xgb_sim(train_proportion=0.8):
     # 开始计时，并打印相关信息
     start = time()
     print('\nStart tuning hyper parameters of xgb_sim...')
@@ -361,7 +411,7 @@ def tuning_hyper_parameters_sim_xgb(train_proportion=0.8):
 def predict_test_ol_lr():
     # 开始计时，并打印相关信息
     start = time()
-    print('\nStart predicting test_ol')
+    print('\nStart predicting test_ol lr')
 
     # 加载 test_ol
     test_ol = pd.read_hdf(path_intermediate_dataset + hdf_test_ol)

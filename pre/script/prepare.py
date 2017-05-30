@@ -118,8 +118,8 @@ def train():
     # 重新以 clickTime 排序
     train_df.sort_values(by='clickTime', inplace=True)
 
-    # # 舍弃后一天的样本
-    # train_df = train_df.loc[(train_df['clickTime'] < 300000)]
+    # 舍弃后一个小时的样本
+    train_df = train_df.loc[(train_df['clickTime'] < 302300)]
 
     # 存储
     util.safe_save(path_intermediate_dataset, hdf_train, train_df)

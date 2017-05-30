@@ -241,18 +241,20 @@ def f_conversion_ratio(df, column):
     print_stop(start)
 
 
-def check_null(df):
+def exist_null(df):
     """
     检查一个 DataFrame 中是否有 null.
     :param df: 
     :return: 
     """
+
+    print('Start checking...')
     res = False
     for c in df.columns:
         size = df.loc[df[c].isnull()].index.size
         if size != 0:
             res = True
-            print('{0} 列有 {1} 个缺失值'.format(c, size))
+            print('There is {0} missing values in {1}.'.format(size, c))
     return res
 
 
@@ -352,14 +354,21 @@ def add_feature(df, hdf_file, gen_func):
     :return: 
     """
 
-    # 加载并添加用户的活跃度特征
+    # 加载并添加特征
     in_file = path_feature + hdf_file
     if not os.path.exists(in_file):
         gen_func()
     feature = pd.read_hdf(in_file)
+
     # 成立的条件是对应的合并column处于第1列
-    column = feature.columns.values[0]
-    df = df.merge(feature, how='left', on=column)
+    key = feature.columns.values[0]
+    fn_feature = feature.columns.values[1]
+    # 打印进度信息
+    print_constructing_feature(fn_feature)
+
+    # 添加特征
+    df = df.merge(feature, how='left', on=key)
+
     # 手动释放内存
     del feature
     gc.collect()
@@ -388,7 +397,7 @@ def print_constructing_feature(fn_feature):
     print('Constructing feature: {0}...'.format(fn_feature))
 
 
-def print_sample_ratio(df):
+def print_all_column_sample_ratio(df):
     """
     打印负正样本比例。
     :param df:
@@ -410,3 +419,25 @@ def print_sample_ratio(df):
             res = DataFrame(d, index=['sample_ratio'])
             print(res)
             # print("sample ratio of '{0}': {1}".format(c, int(sample_num_negative / sample_num_positive)))
+
+
+def get_sample_ratio(df, c):
+    """
+    获取特征的每个取值负正样本比例。
+    :param c:
+    :param df:
+    :return:
+    """
+
+    d = {}
+    key_set = set(df[c].values)
+    for key in key_set:
+        indexer_key = df[c] == key
+        sample_num_negative = df.loc[(df['label'] != 1) & indexer_key].index.size
+        sample_num_positive = df.loc[(df['label'] == 1) & indexer_key].index.size
+        if sample_num_positive != 0:
+            sample_ratio = int(sample_num_negative / sample_num_positive)
+        else:
+            sample_ratio = np.nan
+        d[key] = sample_ratio
+    return Series(d).sort_values(ascending=False)
