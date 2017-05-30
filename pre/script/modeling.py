@@ -174,31 +174,56 @@ def tuning_hyper_parameters():
     util.print_stop(start)
     
     
-def tuning_hyper_parameters_sim():
+def tuning_hyper_parameters_sim_avg(train_proportion=0.8):
     # 开始计时，并打印相关信息
     start = time()
-    print('\nStart tuning hyper parameters')
+    print('\nStart tuning hyper parameters of lr sim avg')
 
     # 加载训练集
-    X_train = load_npz(path_modeling_dataset + npz_X)
-    y_train = np.load(path_modeling_dataset + npy_y)    
+    X = load_npz(path_modeling_dataset + npz_X).tocsr()
+    # 划分出训练集、测试集(注意不能随机划分)
+    train_size = int(np.shape(X)[0] * train_proportion)
+    test_size = int(np.shape(X)[0] * (train_proportion + 0.1))
+    # X_train
+    X_train = X[:train_size, :]
+    # X_test
+    X_test = X[train_size:test_size, :]
+    # 手动释放内存
+    del X
+
+    y = np.load(path_modeling_dataset + npy_y)
+    # y_train
+    y_train = y[:train_size]
+    # y_test
+    y_test = y[train_size:test_size]
+    # 手动释放内存
+    del y
+    gc.collect()
 
     # 训练模型
     from sklearn.linear_model import SGDClassifier
-    clf = SGDClassifier(loss='log', alpha=0.0001, n_jobs=-1)
-    clf.fit(X_train, y_train)
+    clf1 = SGDClassifier(loss='log', alpha=0.0001, n_jobs=-1)
+    clf2 = SGDClassifier(loss='log', alpha=0.0001, n_jobs=-1)
+    clf3 = SGDClassifier(loss='log', alpha=0.0001, n_jobs=-1)
+
+    from sklearn.ensemble import VotingClassifier
+    eclf = VotingClassifier(estimators=[('lr1', clf1), ('lr2', clf2), ('lr3', clf3)], voting='soft')
+    eclf.fit(X_train, y_train)
     
-    # 打印在训练集上的 logloss
+    # 打印在训练集，测试集上的 logloss
     from sklearn.metrics import log_loss
-    print('logloss in trainset: ', log_loss(y_train, clf.predict_proba(X_train)))
+    print('logloss in trainset: ', log_loss(y_train, eclf.predict_proba(X_train)))
+    print('logloss in testset: ', log_loss(y_test, eclf.predict_proba(X_test)))
 
     # 手动释放内存
     del X_train
     del y_train
+    del X_test
+    del y_test
     gc.collect()
 
     # 存储模型
-    util.safe_save(path_model, 'sgd_lr.pkl', clf)
+    util.safe_save(path_model, 'sgd_lr.pkl', eclf)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
@@ -247,7 +272,6 @@ def tuning_hyper_parameters_sim_xgb(train_proportion=0.8):
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
-
 
 
 def predict_test_ol_lr():
