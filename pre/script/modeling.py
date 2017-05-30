@@ -119,7 +119,8 @@ def tuning_hyper_parameters():
     # GridSearch
     from sklearn.model_selection import GridSearchCV
     from sklearn.linear_model import SGDClassifier
-    alphas = np.logspace(-6, -2, 5)
+    # alphas = np.logspace(-6, -2, 5)
+    alphas = [0.00006, 0.00008, 0.0001, 0.00012, 0.00014]
     param_grid = {'alpha': alphas}
     generator = tscv.split(X_train)
     clf = GridSearchCV(
