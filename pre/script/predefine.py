@@ -83,6 +83,9 @@ fn_cat_pref = 'cat_pref'
 fn_is_pref_cat = 'is_pref_cat'
 fn_is_child_old = 'is_child_old'
 
+fn_education_hour = 'education_hour'
+fn_gender_age = 'gender_age'
+
 # 注意用 set 而不是 list，以避免在程序中错误地重复添加
 # 那些取值个数较多的特征, 依次为[677, 3447, 6315, 7219, 2595627]
 dense_feature_name_set = {
@@ -125,8 +128,8 @@ columns_set_without_conversion_ratio = {
     'haveBaby',
     'education'
 }
+# 不能把'label' 放到这里
 columns_set_useless = {
-    'label',
     'clickTime',
     'conversionTime',
     'instanceID'

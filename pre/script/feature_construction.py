@@ -771,6 +771,16 @@ def fg_dataset(hdf_out, hdf_in):
     # 添加 connectionType_telecomsOperator
     dataset_df[fn_connectionType_telecomsOperator] = \
         util.elegant_pairing(dataset_df['connectionType'], dataset_df['telecomsOperator'])
+    # 将不明显的类别合并
+    columns_set_inapparent_con_tele = {5, 14, 10, 3}
+    indexer = dataset_df[fn_connectionType_telecomsOperator].isin(columns_set_inapparent_con_tele)
+    dataset_df.loc[indexer, fn_connectionType_telecomsOperator] = 5
+
+    # fn_education_hour
+    dataset_df[fn_education_hour] = util.elegant_pairing(dataset_df['education'], dataset_df['hour'])
+
+    # fn_gender_age
+    dataset_df[fn_gender_age] = util.elegant_pairing(dataset_df['gender'], dataset_df['age'])
 
     # 添加“该 userID_appID 是否已存在安装行为”的特征
     util.print_constructing_feature(fn_is_installed)
@@ -802,6 +812,9 @@ def fg_dataset(hdf_out, hdf_in):
     for c in columns_set_mismatch | columns_set_inapparent | columns_set_useless:
         if c in dataset_df.columns:
             del dataset_df[c]
+
+    if 'test' in hdf_in:
+        del dataset_df['label']
 
     # 检查缺失值
     if util.exist_null(dataset_df):
