@@ -686,7 +686,7 @@ def fg_dataset(hdf_out, hdf_in):
     del dataset_df['hometown']
 
     # 构造是否 is_wifi 特征
-    dataset_df[fn_is_wifi] = dataset_df['connectionType'] == 1
+    dataset_df[fn_is_not_wifi] = dataset_df['connectionType'] != 1
     # 构造 is_child_old 特征
     dataset_df[fn_is_child_old] = (dataset_df['age'] <= 10) | (dataset_df['age'] > 60)
 
@@ -727,7 +727,7 @@ def fg_dataset(hdf_out, hdf_in):
     dataset_df[fn_residence_connectionType] = \
         util.elegant_pairing(dataset_df['residence'], dataset_df['connectionType'])
     dataset_df[fn_appID_is_wifi] = \
-        util.elegant_pairing(dataset_df['appID'], dataset_df[fn_is_wifi])
+        util.elegant_pairing(dataset_df['appID'], dataset_df[fn_is_not_wifi])
 
     # 添加二次组合特征 user-appCategory
     dataset_df[fn_age_appCategory] = util.elegant_pairing(dataset_df['age'], dataset_df['appCategory'])

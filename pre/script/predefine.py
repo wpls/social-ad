@@ -6,6 +6,7 @@ path_feature = path_pre + 'feature/'
 path_modeling_dataset = path_pre + 'modeling-dataset/'
 path_model = path_pre + 'model/'
 path_submission_dataset = path_pre + 'submission-dataset/'
+path_cv_res = path_pre + 'cv-res/'
 
 # 是否舍弃后 5 天的负样本
 discard_negative_last_5_day = False
@@ -55,7 +56,7 @@ hdf_week = 'f_week.h5'
 hdf_userID = 'f_userID.h5'
 
 # 特征名字 fn: feature name
-fn_is_wifi = 'is_wifi'
+fn_is_not_wifi = 'is_not_wifi'
 fn_user_activity = 'user_activity'
 fn_is_installed = 'is_installed'
 fn_app_popularity = 'app_popularity'
@@ -91,7 +92,7 @@ dense_feature_name_set = {
 boolean_features_set = {
     fn_is_installed,
     fn_is_pref_cat,
-    fn_is_wifi,
+    fn_is_not_wifi,
     fn_is_child_old
 }
 # 不应该手动添加，而应该在构造该特征时自动添加
@@ -174,6 +175,9 @@ npz_X_test_ol = 'X_test_ol.npz'
 # 稀疏矩阵，建模数据
 npz_X_train = 'X_train.npz'
 npz_X_test = 'X_test.npz'
+
+# cv_result
+csv_cv_res_xgb = 'cv_res_xgb.csv'
 
 # 提交集
 csv_submission = 'submission.csv'

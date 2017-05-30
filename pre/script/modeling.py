@@ -172,6 +172,89 @@ def tuning_hyper_parameters():
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
+
+
+def tuning_hyper_parameters_xgb(train_proportion=0.1):
+    # 开始计时，并打印相关信息
+    start = time()
+    print('\nStart tuning hyper parameters of xgb...')
+
+    # 加载训练集
+    trainset_df = pd.read_hdf(path_feature + 'fg_trainset.h5')
+
+    # 划分训练集和线下测试集
+    train_size = int(trainset_df.index.size * train_proportion)
+    test_size = int(trainset_df.index.size * (train_proportion + 0.1))
+    boolean_indexer_column = trainset_df.columns == 'label'
+
+    y_train = trainset_df.loc[:train_size, boolean_indexer_column].values.ravel()
+    y_test = trainset_df.loc[train_size:test_size, boolean_indexer_column].values.ravel()
+
+    X_train = trainset_df.loc[:train_size, ~boolean_indexer_column].values
+    X_test = trainset_df.loc[train_size:test_size, ~boolean_indexer_column].values
+
+    del trainset_df
+    gc.collect()
+
+    # 时间序列划分
+    from sklearn.model_selection import TimeSeriesSplit
+    tscv = TimeSeriesSplit(n_splits=2)
+
+    # 损失函数
+    from sklearn.metrics import make_scorer, log_loss
+    loss = make_scorer(log_loss, greater_is_better=False, needs_proba=True)
+
+    # GridSearch
+    from sklearn.model_selection import GridSearchCV
+    from xgboost import XGBClassifier
+
+    max_depth = [3, 4, 5]
+    reg_alpha = [0, 0.0001, 0.001, 0.01, 0.1]
+    reg_lambda = [0.1, 1, 10]
+    subsample = [0.8, 0.9, 1]
+    colsample_bytree = [0.8, 0.9, 1]
+    colsample_bylevel = [0.8, 0.9, 1]
+    param_grid = {
+        'max_depth': max_depth,
+        'reg_alpha': reg_alpha,
+        'reg_lambda': reg_lambda,
+        'subsample': subsample,
+        'colsample_bytree': colsample_bytree,
+        'colsample_bylevel': colsample_bylevel
+    }
+    generator = tscv.split(X_train)
+
+    clf = GridSearchCV(
+        XGBClassifier(n_estimators=125),
+        param_grid,
+        cv=generator,
+        scoring=loss,
+        n_jobs=-1
+    )
+    # 训练模型
+    clf.fit(X_train, y_train)
+
+    # 打印 cv_results
+    cv_results_df = DataFrame(clf.cv_results_)
+    cv_results_df.to_csv(path_cv_res + csv_cv_res_xgb)
+
+    # 打印在训练集, 测试集上的 logloss
+    from sklearn.metrics import log_loss
+    print('logloss in trainset: ', log_loss(y_train, clf.predict_proba(X_train)))
+    print('logloss in testset: ', log_loss(y_test, clf.predict_proba(X_test)))
+
+    # 手动释放内存
+    del X_train
+    del y_train
+    del X_test
+    del y_test
+    gc.collect()
+
+    # 存储模型
+    util.safe_save(path_model, 'xgb.pkl', clf.best_estimator_)
+
+    # 停止计时，并打印相关信息
+    util.print_stop(start)
     
     
 def tuning_hyper_parameters_sim_avg(train_proportion=0.8):
@@ -238,14 +321,15 @@ def tuning_hyper_parameters_sim_xgb(train_proportion=0.8):
     trainset_df = pd.read_hdf(path_feature + 'fg_trainset.h5')
 
     # 划分训练集和线下测试集
-    size = int(trainset_df.index.size * train_proportion)
+    train_size = int(trainset_df.index.size * train_proportion)
+    test_size = int(trainset_df.index.size * (train_proportion + 0.1))
     boolean_indexer_column = trainset_df.columns == 'label'
 
-    y_train = trainset_df.loc[:size, boolean_indexer_column].values.ravel()
-    y_test = trainset_df.loc[size:, boolean_indexer_column].values.ravel()
+    y_train = trainset_df.loc[:train_size, boolean_indexer_column].values.ravel()
+    y_test = trainset_df.loc[train_size:test_size, boolean_indexer_column].values.ravel()
 
-    X_train = trainset_df.loc[:size, ~boolean_indexer_column].values
-    X_test = trainset_df.loc[size:, ~boolean_indexer_column].values
+    X_train = trainset_df.loc[:train_size, ~boolean_indexer_column].values
+    X_test = trainset_df.loc[train_size:test_size, ~boolean_indexer_column].values
 
     del trainset_df
     gc.collect()
