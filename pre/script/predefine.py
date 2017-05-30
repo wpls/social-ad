@@ -87,6 +87,11 @@ dense_feature_name_set = {
     'positionID',
     'userID'
 }
+boolean_features_set = {
+    fn_is_installed,
+    fn_is_pref_cat,
+    fn_is_wifi
+}
 # 不应该手动添加，而应该在构造该特征时自动添加
 numeric_features_static_set = {
     'confidence'

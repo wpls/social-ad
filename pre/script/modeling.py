@@ -33,7 +33,8 @@ def one_hot():
     # 区分出类别特征
     numeric_features_s = pd.read_hdf(path_intermediate_dataset + hdf_numeric_features_set)
     numeric_features_set = set(numeric_features_s)
-    categorical_features = ~trainset_df.columns.isin(numeric_features_set | numeric_features_static_set)
+    categorical_features = \
+        ~trainset_df.columns.isin(numeric_features_set | numeric_features_static_set | boolean_features_set)
     print('numeric_features: ', numeric_features_set | numeric_features_static_set)
 
     # X
