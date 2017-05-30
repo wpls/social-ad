@@ -689,8 +689,7 @@ def fg_dataset(hdf_out, hdf_in):
     dataset_df[fn_is_wifi] = dataset_df['connectionType'] == 1
     # 构造 is_child_old 特征
     dataset_df[fn_is_child_old] = (dataset_df['age'] <= 10) | (dataset_df['age'] > 60)
-    # 删除原始 age 特征
-    del dataset_df['age']
+
 
     # # 为了在构造转化率特征时，使用完整的年龄信息而不是年龄段信息。所以到这里才给age分段
     # age_interval = [0, 1, 4, 14, 29, 44, 59, 74, 84]
@@ -770,6 +769,9 @@ def fg_dataset(hdf_out, hdf_in):
     # if 'train' in hdf_in:
     #     # 舍弃后一个小时的样本
     #     dataset_df = dataset_df.loc[(dataset_df['clickTime'] < 302300)]
+
+    # 删除原始 age 特征
+    del dataset_df['age']
 
     # 删除不匹配的列
     for c in columns_set_mismatch | columns_set_inapparent:
