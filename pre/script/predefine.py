@@ -77,6 +77,7 @@ fn_haveBaby_appCategory = 'haveBaby_appCategory'
 
 fn_cat_pref = 'cat_pref'
 fn_is_pref_cat = 'is_pref_cat'
+fn_is_child_old = 'is_child_old'
 
 # 注意用 set 而不是 list，以避免在程序中错误地重复添加
 # 那些取值个数较多的特征, 依次为[677, 3447, 6315, 7219, 2595627]
@@ -90,7 +91,8 @@ dense_feature_name_set = {
 boolean_features_set = {
     fn_is_installed,
     fn_is_pref_cat,
-    fn_is_wifi
+    fn_is_wifi,
+    fn_is_child_old
 }
 # 不应该手动添加，而应该在构造该特征时自动添加
 numeric_features_static_set = {

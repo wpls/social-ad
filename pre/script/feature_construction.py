@@ -687,10 +687,12 @@ def fg_dataset(hdf_out, hdf_in):
 
     # 构造是否 is_wifi 特征
     dataset_df[fn_is_wifi] = dataset_df['connectionType'] == 1
+    # 构造 is_child_old 特征
+    dataset_df[fn_is_child_old] = (dataset_df['age'] <= 10) | (dataset_df['age'] > 60)
 
-    # 为了在构造转化率特征时，使用完整的年龄信息而不是年龄段信息。所以到这里才给age分段
-    age_interval = [0, 1, 4, 14, 29, 44, 59, 74, 84]
-    dataset_df['age'] = pd.cut(dataset_df['age'], age_interval, right=False, include_lowest=True, labels=False)
+    # # 为了在构造转化率特征时，使用完整的年龄信息而不是年龄段信息。所以到这里才给age分段
+    # age_interval = [0, 1, 4, 14, 29, 44, 59, 74, 84]
+    # dataset_df['age'] = pd.cut(dataset_df['age'], age_interval, right=False, include_lowest=True, labels=False)
 
     # # 加载并添加用户的活跃度特征
     # util.print_constructing_feature(fn_user_activity)
