@@ -117,9 +117,9 @@ def f_user_activity_cat():
     :return:
     """
 
-    out_file = path_feature + hdf_user_activity_cat
-    if util.is_exist(out_file):
-        return
+    # out_file = path_feature + hdf_user_activity_cat
+    # if util.is_exist(out_file):
+    #     return
 
     # 开始计时，并打印相关信息
     start = util.print_start(hdf_user_activity_cat)
@@ -198,6 +198,48 @@ def f_user_pref_cat():
 
     # 存储
     util.safe_save(path_feature, hdf_user_pref_cat, user_pref_cat)
+
+    # 停止计时，并打印相关信息
+    util.print_stop(start)
+
+
+def reclassify_residence():
+    """
+    对 residence 重新分类
+    :return:
+    """
+
+    # out_file = path_feature + hdf_residence_cat
+    # if util.is_exist(out_file):
+    #     return
+
+    # 开始计时，并打印相关信息
+    start = util.print_start(hdf_residence_cat)
+
+    # 加载数据集
+    trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+
+    column = 'residence'
+
+    # 获取负正样本比例
+    sample_ratio = util.get_sample_ratio(trainset_df, column)
+    del trainset_df
+    gc.collect()
+
+    # 获取新类
+    new_cat_list = util.get_new_cat_list(sample_ratio, range(10, 100, 10))
+
+    user_df = pd.read_hdf(path_intermediate_dataset + hdf_user)
+    residence_cat_df = user_df[column].value_counts().reset_index()
+    del user_df
+    gc.collect()
+
+    residence_cat_df.columns = [column, fn_residence_cat]
+
+    residence_cat_df = util.assign_new_cat(residence_cat_df, column, new_cat_list)
+
+    # 存储
+    util.safe_save(path_feature, hdf_residence_cat, residence_cat_df)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
@@ -723,7 +765,6 @@ def fg_dataset(hdf_out, hdf_in):
     dataset_df[fn_is_child_old] = (dataset_df['age'] <= 10) | (dataset_df['age'] > 60)
 
     # 加载并添加用户的活跃度特征
-    util.print_constructing_feature(fn_user_activity_cat)
     dataset_df = util.add_feature(dataset_df, hdf_user_activity_cat, f_user_activity_cat)
     # 将 user_activity 的 NaN 填充为 4, 因为这是一个无关紧要的类
     dataset_df[fn_user_activity_cat].fillna(4, inplace=True)
@@ -738,7 +779,6 @@ def fg_dataset(hdf_out, hdf_in):
     del dataset_df[fn_cat_pref]
 
     # 添加 app 的流行度特征
-    util.print_constructing_feature(fn_app_popularity)
     dataset_df = util.add_feature(dataset_df, hdf_app_popularity, f_app_popularity)
     # 将 app_popularity 的 NaN 填充为 6, 因为这是一个无关紧要的类（回头仔细想一下这种方式对不对）
     dataset_df[fn_app_popularity].fillna(0, inplace=True)
@@ -751,13 +791,13 @@ def fg_dataset(hdf_out, hdf_in):
         util.elegant_pairing(dataset_df['education'], dataset_df['connectionType'])
     dataset_df[fn_marriageStatus_connectionType] = \
         util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['connectionType'])
-    dataset_df[fn_residence_connectionType] = \
-        util.elegant_pairing(dataset_df['residence'], dataset_df['connectionType'])
+    # dataset_df[fn_residence_connectionType] = \
+    #     util.elegant_pairing(dataset_df['residence'], dataset_df['connectionType'])
     dataset_df[fn_appID_is_wifi] = \
         util.elegant_pairing(dataset_df['appID'], dataset_df[fn_is_not_wifi])
 
     # 添加二次组合特征 user-appCategory
-    dataset_df[fn_age_appCategory] = util.elegant_pairing(dataset_df['age'], dataset_df['appCategory'])
+    # dataset_df[fn_age_appCategory] = util.elegant_pairing(dataset_df['age'], dataset_df['appCategory'])
     dataset_df[fn_gender_appCategory] = util.elegant_pairing(dataset_df['gender'], dataset_df['appCategory'])
     dataset_df[fn_education_appCategory] = util.elegant_pairing(dataset_df['education'], dataset_df['appCategory'])
     # dataset_df[fn_marriageStatus_appCategory] = \
@@ -781,6 +821,11 @@ def fg_dataset(hdf_out, hdf_in):
 
     # fn_gender_age
     dataset_df[fn_gender_age] = util.elegant_pairing(dataset_df['gender'], dataset_df['age'])
+
+    # fn_residence_cat
+    dataset_df = util.add_feature(dataset_df, hdf_residence_cat, reclassify_residence)
+    # 将缺失值填充为 3, 因为这是一个无关紧要的类
+    dataset_df[fn_residence_cat].fillna(4, inplace=True)
 
     # 添加“该 userID_appID 是否已存在安装行为”的特征
     util.print_constructing_feature(fn_is_installed)
@@ -809,7 +854,7 @@ def fg_dataset(hdf_out, hdf_in):
     #     dataset_df = f_confidence_testset_ol(testset_ol=dataset_df)
 
     # 删除不匹配的, 和不能明显有助于分类的列
-    for c in columns_set_mismatch | columns_set_inapparent | columns_set_useless:
+    for c in columns_set_mismatch | columns_set_inapparent | columns_set_useless | columns_set_reclassified:
         if c in dataset_df.columns:
             del dataset_df[c]
 

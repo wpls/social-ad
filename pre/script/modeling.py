@@ -257,7 +257,7 @@ def tuning_hyper_parameters_xgb(train_proportion=0.1):
     util.print_stop(start)
 
 
-def tuning_hyper_parameters_lr_sim(train_proportion=0.8):
+def tuning_hyper_parameters_lr_sim(train_proportion=0.9):
     # 开始计时，并打印相关信息
     start = time()
     print('\nStart tuning hyper parameters of lr_sim')
@@ -266,11 +266,12 @@ def tuning_hyper_parameters_lr_sim(train_proportion=0.8):
     X = load_npz(path_modeling_dataset + npz_X).tocsr()
     # 划分出训练集、测试集(注意不能随机划分)
     train_size = int(np.shape(X)[0] * train_proportion)
-    test_size = int(np.shape(X)[0] * (train_proportion + 0.1))
+    # test_size = int(np.shape(X)[0] * (train_proportion + 0.1))
     # X_train
     X_train = X[:train_size, :]
     # X_test
-    X_test = X[train_size:test_size, :]
+    # X_test = X[train_size:test_size, :]
+    X_test = X[train_size:, :]
     # 手动释放内存
     del X
 
@@ -278,7 +279,8 @@ def tuning_hyper_parameters_lr_sim(train_proportion=0.8):
     # y_train
     y_train = y[:train_size]
     # y_test
-    y_test = y[train_size:test_size]
+    # y_test = y[train_size:test_size]
+    y_test = y[train_size:]
     # 手动释放内存
     del y
     gc.collect()

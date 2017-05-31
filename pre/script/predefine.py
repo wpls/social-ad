@@ -47,6 +47,7 @@ hdf_user_cat_weight = 'f_user_cat_weight.h5'
 hdf_app_popularity = 'f_app_popularity.h5'
 hdf_user_activity = 'f_user_activity.h5'
 hdf_user_activity_cat = 'f_user_activity_cat.h5'
+hdf_residence_cat = 'f_residence_cat.h5'
 
 hdf_hour_weight = 'f_hour_weight.h5'
 hdf_conversion_ratio_connectionType = 'f_conversion_ratio_connectionType.h5'
@@ -85,6 +86,7 @@ fn_is_child_old = 'is_child_old'
 
 fn_education_hour = 'education_hour'
 fn_gender_age = 'gender_age'
+fn_residence_cat = 'residence_cat'
 
 # 注意用 set 而不是 list，以避免在程序中错误地重复添加
 # 那些取值个数较多的特征, 依次为[677, 3447, 6315, 7219, 2595627]
@@ -114,8 +116,9 @@ columns_set_without_count_ratio = {
     'instanceID'
 }
 # trainset 与 testset_ol 取值不匹配的列, 同时这些列本身也是应当舍弃的
+# 这里犯错误了，'advertiserID'是一个重要的特征
 columns_set_mismatch = {
-    'advertiserID',
+    # 'advertiserID',
     'camgaignID',
     'adID',
     'creativeID',
@@ -144,6 +147,11 @@ columns_set_inapparent = {
     'conversion_ratio_hour',
     'conversion_ratio_week',
     'user_activity',
+    'age'
+}
+# 已被重新分类
+columns_set_reclassified = {
+    'residence',
     'age'
 }
 

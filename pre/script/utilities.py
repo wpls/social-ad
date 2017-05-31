@@ -441,3 +441,35 @@ def get_sample_ratio(df, c):
             sample_ratio = np.nan
         d[key] = sample_ratio
     return Series(d).sort_values(ascending=False)
+
+
+def get_new_cat_list(sample_ratio, rg):
+    """
+    获取一系列分类的 set
+    :param sample_ratio:
+    :param rg:
+    :return:
+    """
+    end = 0
+    new_cat_list = [set(sample_ratio.loc[sample_ratio.isnull()].index)]
+    for begin in rg:
+        end = begin + 9
+        new_cat_list.append(set(sample_ratio.loc[(sample_ratio >= begin) & (sample_ratio <= end)].index))
+    new_cat_list.append(set(sample_ratio.loc[sample_ratio > end].index))
+    return new_cat_list
+
+
+def assign_new_cat(df, column, new_cat_list):
+    """
+    分配新类。
+    :param df:
+    :param column:
+    :param new_cat_list:
+    :return:
+    """
+
+    new_column = column + '_cat'
+    for cat_label in range(len(new_cat_list)):
+        indexer = df[column].isin(new_cat_list[cat_label])
+        df.loc[indexer, new_column] = cat_label
+    return df
