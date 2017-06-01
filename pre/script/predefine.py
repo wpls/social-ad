@@ -80,6 +80,12 @@ fn_education_appCategory = 'education_appCategory'
 fn_marriageStatus_appCategory = 'marriageStatus_appCategory'
 fn_haveBaby_appCategory = 'haveBaby_appCategory'
 
+fn_age_advertiserID = 'age_advertiserID'
+fn_gender_advertiserID = 'gender_advertiserID'
+fn_education_advertiserID = 'education_advertiserID'
+fn_marriageStatus_advertiserID = 'marriageStatus_advertiserID'
+fn_haveBaby_advertiserID = 'haveBaby_advertiserID'
+
 fn_cat_pref = 'cat_pref'
 fn_is_pref_cat = 'is_pref_cat'
 fn_is_child_old = 'is_child_old'
@@ -148,6 +154,14 @@ columns_set_inapparent = {
     'conversion_ratio_week',
     'user_activity',
     'age'
+    'education',
+    'gender',
+    'conversion_ratio_appCategory',
+    'conversion_ratio_telecomsOperator',
+    'conversion_ratio_gender',
+    'appCategory',
+    'connectionType',
+    'telecomsOperator'
 }
 # 已被重新分类
 columns_set_reclassified = {

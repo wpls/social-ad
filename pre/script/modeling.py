@@ -24,6 +24,8 @@ def one_hot():
     print('\nStart one hot')
 
     trainset_df = pd.read_hdf(path_feature + hdf_trainset_fg)
+    if 'clickTime' in trainset_df.columns:
+        del trainset_df['clickTime']
 
     # y
     y = trainset_df['label']
@@ -257,7 +259,7 @@ def tuning_hyper_parameters_xgb(train_proportion=0.1):
     util.print_stop(start)
 
 
-def tuning_hyper_parameters_lr_sim(train_proportion=0.9):
+def tuning_hyper_parameters_lr_sim(n_iter_max = 100):
     # 开始计时，并打印相关信息
     start = time()
     print('\nStart tuning hyper parameters of lr_sim')
@@ -265,7 +267,8 @@ def tuning_hyper_parameters_lr_sim(train_proportion=0.9):
     # 加载训练集
     X = load_npz(path_modeling_dataset + npz_X).tocsr()
     # 划分出训练集、测试集(注意不能随机划分)
-    train_size = int(np.shape(X)[0] * train_proportion)
+    train_size = 1208192
+    # train_size = int(np.shape(X)[0] * train_proportion)
     # test_size = int(np.shape(X)[0] * (train_proportion + 0.1))
     # X_train
     X_train = X[:train_size, :]
@@ -287,13 +290,43 @@ def tuning_hyper_parameters_lr_sim(train_proportion=0.9):
 
     # 训练模型
     from sklearn.linear_model import SGDClassifier
-    clf = SGDClassifier(loss='log', alpha=0.0001, n_jobs=-1)
-    clf.fit(X_train, y_train)
-
-    # 打印在训练集，测试集上的 logloss
     from sklearn.metrics import log_loss
-    print('logloss in trainset: ', log_loss(y_train, clf.predict_proba(X_train)))
-    print('logloss in testset: ', log_loss(y_test, clf.predict_proba(X_test)))
+    loss_test_list = []
+    clf_list = []
+    alphas = np.logspace(-6, -2, 5)
+    for alpha in alphas:
+        clf = SGDClassifier(loss='log', alpha=alpha, n_jobs=-1)
+        clf.fit(X_train, y_train)
+
+        loss_train = log_loss(y_train, clf.predict_proba(X_train))
+        loss_test = log_loss(y_test, clf.predict_proba(X_test))
+
+        loss_test_list.append(loss_test)
+        clf_list.append(clf)
+        # 打印在训练集,测试集上的 logloss
+        print('\nalpha = {0}'.format(alpha))
+        print('logloss in trainset: ', loss_train)
+        print('logloss in testset: ', loss_test)
+
+    alpha = alphas[np.argmin(loss_test_list)]
+    loss_test_prev = 1
+    n_iter = 1
+    clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter, n_jobs=-1, random_state=42)
+    while n_iter < n_iter_max:
+        clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter, n_jobs=-1, random_state=42)
+        clf.fit(X_train, y_train)
+
+        loss_train = log_loss(y_train, clf.predict_proba(X_train))
+        loss_test = log_loss(y_test, clf.predict_proba(X_test))
+
+        print('\nn_iter = {0}'.format(n_iter))
+        print('logloss in trainset: ', loss_train)
+        print('logloss in testset: ', loss_test)
+
+        if loss_test > loss_test_prev:
+            break
+        loss_test_prev = loss_test
+        n_iter += 1
 
     # 手动释放内存
     del X_train
@@ -364,7 +397,7 @@ def tuning_hyper_parameters_lr_sim_avg(train_proportion=0.8):
     util.print_stop(start)
 
 
-def tuning_hyper_parameters_xgb_sim(train_proportion=0.8):
+def tuning_hyper_parameters_xgb_sim():
     # 开始计时，并打印相关信息
     start = time()
     print('\nStart tuning hyper parameters of xgb_sim...')
@@ -373,28 +406,39 @@ def tuning_hyper_parameters_xgb_sim(train_proportion=0.8):
     trainset_df = pd.read_hdf(path_feature + 'fg_trainset.h5')
 
     # 划分训练集和线下测试集
-    train_size = int(trainset_df.index.size * train_proportion)
-    test_size = int(trainset_df.index.size * (train_proportion + 0.1))
-    boolean_indexer_column = trainset_df.columns == 'label'
+    row_indexer_train = (trainset_df['clickTime'] >= 210000) & (trainset_df['clickTime'] < 250000)
+    row_indexer_test = (trainset_df['clickTime'] >= 250000) & (trainset_df['clickTime'] < 260000)
 
-    y_train = trainset_df.loc[:train_size, boolean_indexer_column].values.ravel()
-    y_test = trainset_df.loc[train_size:test_size, boolean_indexer_column].values.ravel()
+    del trainset_df['clickTime']
+    col_indexer = trainset_df.columns == 'label'
 
-    X_train = trainset_df.loc[:train_size, ~boolean_indexer_column].values
-    X_test = trainset_df.loc[train_size:test_size, ~boolean_indexer_column].values
+    y_train = trainset_df.loc[row_indexer_train, col_indexer].values.ravel()
+    y_test = trainset_df.loc[row_indexer_test, col_indexer].values.ravel()
+
+    X_train = trainset_df.loc[row_indexer_train, ~col_indexer].values
+    X_test = trainset_df.loc[row_indexer_test, ~col_indexer].values
 
     del trainset_df
     gc.collect()
 
-    # 训练模型
+    # 调参
     from xgboost import XGBClassifier
-    clf = XGBClassifier(n_estimators=300, reg_alpha=0.001, subsample=0.8, colsample_bytree=0.8)
-    clf.fit(X_train, y_train)
-
-    # 打印在训练集上的 logloss
     from sklearn.metrics import log_loss
-    print('logloss in trainset: ', log_loss(y_train, clf.predict_proba(X_train)))
-    print('logloss in testset: ', log_loss(y_test, clf.predict_proba(X_test)))
+    loss_test_list = []
+    clf_list = []
+    for n in range(100, 220, 20):
+        clf = XGBClassifier(n_estimators=n)
+        clf.fit(X_train, y_train)
+
+        loss_train = log_loss(y_train, clf.predict_proba(X_train))
+        loss_test = log_loss(y_test, clf.predict_proba(X_test))
+
+        loss_test_list.append(loss_test)
+        clf_list.append(clf)
+        # 打印在训练集,测试集上的 logloss
+        print('\nn_estimators = {0}'.format(n))
+        print('logloss in trainset: ', loss_train)
+        print('logloss in testset: ', loss_test)
 
     # 手动释放内存
     del X_train
@@ -404,7 +448,7 @@ def tuning_hyper_parameters_xgb_sim(train_proportion=0.8):
     gc.collect()
 
     # 存储模型
-    util.safe_save(path_model, 'xgb.pkl', clf)
+    util.safe_save(path_model, 'xgb.pkl', clf_list[np.argmin(loss_test_list)])
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
@@ -517,6 +561,47 @@ def predict_average():
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
+
+
+# test_results = pd.read_csv('test_results.csv')
+def modelfit(clf, trainset_df, testset_df, feature_col, useTrainCV=False, cv_folds=5, early_stopping_rounds=50):
+    if useTrainCV:
+        xgb_param = clf.get_xgb_params()
+        xgtrain = xgb.DMatrix(trainset_df[feature_col].values, label=trainset_df[target].values)
+        xgtest = xgb.DMatrix(testset_df[feature_col].values)
+        cvresult = xgb.cv(xgb_param, xgtrain, num_boost_round=clf.get_params()['n_estimators'], nfold=cv_folds,
+                          early_stopping_rounds=early_stopping_rounds)
+        clf.set_params(n_estimators=cvresult.shape[0])
+
+    X_train = trainset_df[feature_col].values
+    y_train = trainset_df['label'].values
+
+    X_test = testset_df[feature_col].values
+    y_test = testset_df['label'].values
+
+    # 建模
+    clf.fit(X_train, y_train, eval_metric='logloss')
+
+    # 对训练集预测
+    y_pred_train = clf.predict(X_train)
+    y_pred_prob_train = clf.predict_proba(y_train)[:, 1]
+
+    # 对测试集的预测
+    y_pred_test = clf.predict(X_test)
+    y_pred_prob_test = clf.predict_proba(y_test)[:, 1]
+
+    # 输出模型的一些结果
+    print("\n训练集")
+    print("准确率 : %.4g" % metrics.accuracy_score(y_train, y_pred_train))
+    print("logloss 得分 (训练集): %f" % log_loss(y_train, y_pred_prob_train))
+
+    print("\n测试集")
+    print("准确率 : %.4g" % metrics.accuracy_score(y_test, y_pred_test))
+    print("logloss 得分 (训练集): %f" % log_loss(y_test, y_pred_prob_test))
+
+    feat_imp = pd.Series(clf.booster().get_fscore()).sort_values(ascending=False)
+    feat_imp.plot(kind='bar', title='Feature Importance')
+    plt.ylabel('Feature Importance Score')
 
 
 

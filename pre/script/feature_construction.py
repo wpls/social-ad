@@ -769,14 +769,14 @@ def fg_dataset(hdf_out, hdf_in):
     # 将 user_activity 的 NaN 填充为 4, 因为这是一个无关紧要的类
     dataset_df[fn_user_activity_cat].fillna(4, inplace=True)
 
-    # 加载并添加用户对app的品类偏好特征
-    dataset_df = util.add_feature(dataset_df, hdf_user_pref_cat, f_user_pref_cat)
-    # 将 cat_pref 的 NaN 填充为 0
-    dataset_df[fn_cat_pref].fillna(0, inplace=True)
-    # 同时构造 is_pref_cat 特征
-    util.print_constructing_feature(fn_is_pref_cat)
-    dataset_df[fn_is_pref_cat] = dataset_df['appCategory'] == dataset_df[fn_cat_pref]
-    del dataset_df[fn_cat_pref]
+    # # 加载并添加用户对app的品类偏好特征
+    # dataset_df = util.add_feature(dataset_df, hdf_user_pref_cat, f_user_pref_cat)
+    # # 将 cat_pref 的 NaN 填充为 0
+    # dataset_df[fn_cat_pref].fillna(0, inplace=True)
+    # # 同时构造 is_pref_cat 特征
+    # util.print_constructing_feature(fn_is_pref_cat)
+    # dataset_df[fn_is_pref_cat] = dataset_df['appCategory'] == dataset_df[fn_cat_pref]
+    # del dataset_df[fn_cat_pref]
 
     # 添加 app 的流行度特征
     dataset_df = util.add_feature(dataset_df, hdf_app_popularity, f_app_popularity)
@@ -791,6 +791,16 @@ def fg_dataset(hdf_out, hdf_in):
         util.elegant_pairing(dataset_df['education'], dataset_df['connectionType'])
     dataset_df[fn_marriageStatus_connectionType] = \
         util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['connectionType'])
+
+    # 添加二次组合特征 user(age, gender, education, residence)-advertiserID
+    util.print_constructing_feature('secondary combination feature')
+    dataset_df[fn_age_advertiserID] = util.elegant_pairing(dataset_df['age'], dataset_df['advertiserID'])
+    dataset_df[fn_gender_advertiserID] = util.elegant_pairing(dataset_df['gender'], dataset_df['advertiserID'])
+    dataset_df[fn_education_advertiserID] = \
+        util.elegant_pairing(dataset_df['education'], dataset_df['advertiserID'])
+    dataset_df[fn_marriageStatus_advertiserID] = \
+        util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['advertiserID'])
+
     # dataset_df[fn_residence_connectionType] = \
     #     util.elegant_pairing(dataset_df['residence'], dataset_df['connectionType'])
     dataset_df[fn_appID_is_wifi] = \
@@ -804,17 +814,17 @@ def fg_dataset(hdf_out, hdf_in):
     #     util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['appCategory'])
     dataset_df[fn_haveBaby_appCategory] = util.elegant_pairing(dataset_df['haveBaby'], dataset_df['appCategory'])
 
-    # 添加 connectionType-appCategory
-    dataset_df[fn_appCategory_connectionType] = \
-        util.elegant_pairing(dataset_df['connectionType'], dataset_df['appCategory'])
+    # # 添加 connectionType-appCategory
+    # dataset_df[fn_appCategory_connectionType] = \
+    #     util.elegant_pairing(dataset_df['connectionType'], dataset_df['appCategory'])
 
-    # 添加 connectionType_telecomsOperator
-    dataset_df[fn_connectionType_telecomsOperator] = \
-        util.elegant_pairing(dataset_df['connectionType'], dataset_df['telecomsOperator'])
-    # 将不明显的类别合并
-    columns_set_inapparent_con_tele = {5, 14, 10, 3}
-    indexer = dataset_df[fn_connectionType_telecomsOperator].isin(columns_set_inapparent_con_tele)
-    dataset_df.loc[indexer, fn_connectionType_telecomsOperator] = 5
+    # # 添加 connectionType_telecomsOperator
+    # dataset_df[fn_connectionType_telecomsOperator] = \
+    #     util.elegant_pairing(dataset_df['connectionType'], dataset_df['telecomsOperator'])
+    # # 将不明显的类别合并
+    # columns_set_inapparent_con_tele = {5, 14, 10, 3}
+    # indexer = dataset_df[fn_connectionType_telecomsOperator].isin(columns_set_inapparent_con_tele)
+    # dataset_df.loc[indexer, fn_connectionType_telecomsOperator] = 5
 
     # fn_education_hour
     dataset_df[fn_education_hour] = util.elegant_pairing(dataset_df['education'], dataset_df['hour'])
@@ -822,10 +832,10 @@ def fg_dataset(hdf_out, hdf_in):
     # fn_gender_age
     dataset_df[fn_gender_age] = util.elegant_pairing(dataset_df['gender'], dataset_df['age'])
 
-    # fn_residence_cat
-    dataset_df = util.add_feature(dataset_df, hdf_residence_cat, reclassify_residence)
-    # 将缺失值填充为 3, 因为这是一个无关紧要的类
-    dataset_df[fn_residence_cat].fillna(4, inplace=True)
+    # # fn_residence_cat
+    # dataset_df = util.add_feature(dataset_df, hdf_residence_cat, reclassify_residence)
+    # # 将缺失值填充为 3, 因为这是一个无关紧要的类
+    # dataset_df[fn_residence_cat].fillna(4, inplace=True)
 
     # 添加“该 userID_appID 是否已存在安装行为”的特征
     util.print_constructing_feature(fn_is_installed)
@@ -855,6 +865,13 @@ def fg_dataset(hdf_out, hdf_in):
 
     # 删除不匹配的, 和不能明显有助于分类的列
     for c in columns_set_mismatch | columns_set_inapparent | columns_set_useless | columns_set_reclassified:
+        # 对xgb来说，暂时不删除trian中的 clickTime
+        if 'train' in hdf_in and c == 'clickTime':
+            continue
+        if c in dataset_df.columns:
+            del dataset_df[c]
+
+    for c in columns_set_inapparent:
         if c in dataset_df.columns:
             del dataset_df[c]
 

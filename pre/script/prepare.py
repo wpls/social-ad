@@ -118,8 +118,11 @@ def train():
     # 重新以 clickTime 排序
     train_df.sort_values(by='clickTime', inplace=True)
 
-    # 舍弃后一个小时的样本
-    train_df = train_df.loc[(train_df['clickTime'] <= 301220) & ((train_df['clickTime'] / 10000).astype(int) != 19)]
+    # # 舍弃后一个小时的样本
+    # train_df = train_df.loc[(train_df['clickTime'] <= 301220) & ((train_df['clickTime'] / 10000).astype(int) != 19)]
+
+    # 仅取出 21,22,23,24,25 来建模
+    train_df = train_df.loc[(train_df['clickTime'] >= 210000) & (train_df['clickTime'] < 260000)]
     # 存储
     util.safe_save(path_intermediate_dataset, hdf_train, train_df)
 
