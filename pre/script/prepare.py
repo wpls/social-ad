@@ -90,6 +90,9 @@ def train():
     # 加载 train.csv
     train_df = pd.read_csv(path_original_dataset + csv_train)
 
+    # 原始的列，用于后面筛选
+    original_columns = train_df.columns
+
     # ===== 填充telecomsOperator中的缺失值 =====
     userID_telecomsOperator = train_df.groupby(['userID', 'telecomsOperator'], as_index=False).count()
     userID_count = userID_telecomsOperator['userID'].value_counts()
@@ -118,8 +121,32 @@ def train():
     # 重新以 clickTime 排序
     train_df.sort_values(by='clickTime', inplace=True)
 
-    # 舍弃后一个小时的样本
-    train_df = train_df.loc[(train_df['clickTime'] <= 301220) & ((train_df['clickTime'] / 10000).astype(int) != 19)]
+    # ===== 删除不准确的样本 =====
+    util.to_minute(train_df, 'clickTime')
+    util.to_minute(train_df, 'conversionTime')
+
+    train_df['deltaTime_min'] = train_df['conversionTime_min'] - train_df['clickTime_min']
+    train_df['delta_deadline_min'] = 30 * 24 * 60 + 23 * 60 + 59 - train_df['clickTime_min']
+
+    # 加载 ad.csv
+    ad_df = pd.read_hdf(path_intermediate_dataset + 'ad.h5')
+    train_df = train_df.merge(ad_df, how='left', on='creativeID')
+
+    q = 0.91
+    grouped = train_df[['advertiserID', 'deltaTime_min']].groupby('advertiserID', as_index=False)
+    column = 'deltaTime_min_' + str(q)
+    advertiserID_deltaTime_stats = grouped.quantile(q)
+    advertiserID_deltaTime_stats.rename(columns={'deltaTime_min': column}, inplace=True)
+    # 合并
+    train_df = train_df.merge(advertiserID_deltaTime_stats, how='left', on='advertiserID')
+
+    # 筛选, 仅保留有效行和原始列
+    indexer_valid = (train_df['delta_deadline_min'] >= train_df[column]) | (train_df['label'] == 1)
+    train_df = train_df.loc[indexer_valid, original_columns]
+
+    # # 舍弃后一个小时的样本
+    # train_df = train_df.loc[(train_df['clickTime'] <= 301220) & ((train_df['clickTime'] / 10000).astype(int) != 19)]
+
     # 存储
     util.safe_save(path_intermediate_dataset, hdf_train, train_df)
 

@@ -257,7 +257,7 @@ def tuning_hyper_parameters_xgb(train_proportion=0.1):
     util.print_stop(start)
 
 
-def tuning_hyper_parameters_lr_sim(train_proportion=0.9):
+def tuning_hyper_parameters_lr_sim(n_iter_max=10):
     # 开始计时，并打印相关信息
     start = time()
     print('\nStart tuning hyper parameters of lr_sim')
@@ -265,21 +265,14 @@ def tuning_hyper_parameters_lr_sim(train_proportion=0.9):
     # 加载训练集
     X = load_npz(path_modeling_dataset + npz_X).tocsr()
     # 划分出训练集、测试集(注意不能随机划分)
-    train_size = int(np.shape(X)[0] * train_proportion)
-    # test_size = int(np.shape(X)[0] * (train_proportion + 0.1))
-    # X_train
+    train_size = 3353241
     X_train = X[:train_size, :]
-    # X_test
-    # X_test = X[train_size:test_size, :]
     X_test = X[train_size:, :]
     # 手动释放内存
     del X
 
     y = np.load(path_modeling_dataset + npy_y)
-    # y_train
     y_train = y[:train_size]
-    # y_test
-    # y_test = y[train_size:test_size]
     y_test = y[train_size:]
     # 手动释放内存
     del y
@@ -287,13 +280,50 @@ def tuning_hyper_parameters_lr_sim(train_proportion=0.9):
 
     # 训练模型
     from sklearn.linear_model import SGDClassifier
-    clf = SGDClassifier(loss='log', alpha=0.0001, n_jobs=-1)
-    clf.fit(X_train, y_train)
-
-    # 打印在训练集，测试集上的 logloss
     from sklearn.metrics import log_loss
-    print('logloss in trainset: ', log_loss(y_train, clf.predict_proba(X_train)))
-    print('logloss in testset: ', log_loss(y_test, clf.predict_proba(X_test)))
+
+    alphas = np.logspace(-6, -2, 5)
+    alpha_best = 0
+    log_loss_test_best = 1
+    for alpha in alphas:
+        clf = SGDClassifier(loss='log', alpha=alpha, n_jobs=-1, random_state=42)
+        clf.fit(X_train, y_train)
+
+        # 打印在训练集，测试集上的 logloss
+        log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
+        log_loss_test = log_loss(y_test, clf.predict_proba(X_test))
+        print('alpha: {0}'.format(alpha))
+        print('logloss in trainset: {0:0.6f}, logloss in testset: {1:0.6f}'.format(
+            log_loss_train, log_loss_test))
+
+        if log_loss_test < log_loss_test_best:
+            log_loss_test_best = log_loss_test
+            alpha_best = alpha
+
+    n_iter = 1
+    n_iter_best = 5
+    while n_iter < n_iter_max:
+        clf = SGDClassifier(loss='log', alpha=alpha_best, n_iter=n_iter, n_jobs=-1, random_state=42)
+        clf.fit(X_train, y_train)
+
+        # 打印在训练集，测试集上的 logloss
+        log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
+        log_loss_test = log_loss(y_test, clf.predict_proba(X_test))
+        print('alpha: {0}, n_iter: {1}'.format(alpha_best, n_iter))
+        print('logloss in trainset: {0:0.6f}, logloss in testset: {1:0.6f}'.format(
+            log_loss_train, log_loss_test))
+
+        if log_loss_test <= log_loss_test_best:
+            log_loss_test_best = log_loss_test
+            n_iter_best = n_iter
+        elif log_loss_test - log_loss_test_best > 0.001:
+            break
+        n_iter += 1
+
+    print('\nbest alpha: {0}, best n_iter: {1}, best log_loss_test: {2:0.6f}'.format(
+        alpha_best, n_iter_best, log_loss_test_best))
+    clf_best = SGDClassifier(loss='log', alpha=alpha_best, n_iter=n_iter_best, n_jobs=-1, random_state=42)
+    clf_best.fit(X_train, y_train)
 
     # 手动释放内存
     del X_train
@@ -303,7 +333,7 @@ def tuning_hyper_parameters_lr_sim(train_proportion=0.9):
     gc.collect()
 
     # 存储模型
-    util.safe_save(path_model, 'sgd_lr.pkl', clf)
+    util.safe_save(path_model, 'sgd_lr.pkl', clf_best)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
