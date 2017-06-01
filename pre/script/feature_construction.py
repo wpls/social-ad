@@ -713,6 +713,37 @@ def f_conversion_ratio():
     gc.collect()
 
 
+def f_conversion_count():
+    """
+    为 hdf_datatset 中的特征构造 conversion_count 特征，并存储到硬盘。
+    """
+
+    # 加载数据集
+    trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+
+    # 遍历数据集中的有效特征
+    for c in (trainset_df.columns & columns_set_to_construct_conversion_count):
+        util.f_conversion_count(trainset_df, c)
+
+    del trainset_df
+    gc.collect()
+
+
+def add_conversion_count(df, column):
+    conversion_count_column = 'conversion_count_' + column
+    util.print_constructing_feature(conversion_count_column)
+
+    conversion_count = DataFrame(df.loc[df['label'] == 1, column].value_counts())
+    conversion_count.reset_index(inplace=True)
+    conversion_count.columns = [column, conversion_count_column]
+
+    df = df.merge(conversion_count, how='left', on=column)
+    df[conversion_count_column].fillna(0, inplace=True)
+    del df[column]
+
+    return df
+
+
 def fg_dataset(hdf_out, hdf_in):
     """
     为 trainset 和 testset_ol 添加已经构造好的特征。
@@ -744,16 +775,19 @@ def fg_dataset(hdf_out, hdf_in):
     for c in (dataset_df.columns & columns_set_to_construct_conversion_ratio):
         hdf_feature = 'f_conversion_ratio_' + c + '.h5'
         fn_feature = 'conversion_ratio_' + c
-        # 打印进度信息
-        util.print_constructing_feature(fn_feature)
-
-        in_file = path_feature + hdf_feature
-        conversion_ratio = pd.read_hdf(in_file)
-        dataset_df = dataset_df.merge(conversion_ratio, how='left', on=c)
+        # 添加特征
+        dataset_df = util.add_feature(dataset_df, hdf_feature, f_conversion_ratio)
         # 填充缺失值
         dataset_df[fn_feature].fillna(0, inplace=True)
-        del conversion_ratio
-        gc.collect()
+
+    # 为每个有效特征添加对应的 conversion_count 特征
+    for c in (dataset_df.columns & columns_set_to_construct_conversion_count):
+        hdf_feature = 'f_conversion_count_' + c + '.h5'
+        fn_feature = 'conversion_count_' + c
+        # 添加特征
+        dataset_df = util.add_feature(dataset_df, hdf_feature, f_conversion_count)
+        # 填充缺失值
+        dataset_df[fn_feature].fillna(0, inplace=True)
 
     # 构造是否 is_not_wifi 特征
     util.print_constructing_feature(fn_is_not_wifi)
@@ -784,46 +818,59 @@ def fg_dataset(hdf_out, hdf_in):
     # 添加二次组合特征 user(age, gender, education, residence)-connectionType
     util.print_constructing_feature('secondary combination feature')
     dataset_df[fn_age_connectionType] = util.elegant_pairing(dataset_df['age'], dataset_df['connectionType'])
-    dataset_df[fn_gender_connectionType] = util.elegant_pairing(dataset_df['gender'], dataset_df['connectionType'])
-    dataset_df[fn_education_connectionType] = \
-        util.elegant_pairing(dataset_df['education'], dataset_df['connectionType'])
-    dataset_df[fn_marriageStatus_connectionType] = \
-        util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['connectionType'])
+    # dataset_df[fn_gender_connectionType] = util.elegant_pairing(dataset_df['gender'], dataset_df['connectionType'])
+    # dataset_df[fn_education_connectionType] = \
+    #     util.elegant_pairing(dataset_df['education'], dataset_df['connectionType'])
+    # dataset_df[fn_marriageStatus_connectionType] = \
+    #     util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['connectionType'])
     # dataset_df[fn_residence_connectionType] = \
     #     util.elegant_pairing(dataset_df['residence'], dataset_df['connectionType'])
     dataset_df[fn_appID_is_wifi] = \
         util.elegant_pairing(dataset_df['appID'], dataset_df[fn_is_not_wifi])
 
     # 添加二次组合特征 user-appCategory
-    # dataset_df[fn_age_appCategory] = util.elegant_pairing(dataset_df['age'], dataset_df['appCategory'])
+    dataset_df[fn_age_appCategory] = util.elegant_pairing(dataset_df['age'], dataset_df['appCategory'])
     dataset_df[fn_gender_appCategory] = util.elegant_pairing(dataset_df['gender'], dataset_df['appCategory'])
     dataset_df[fn_education_appCategory] = util.elegant_pairing(dataset_df['education'], dataset_df['appCategory'])
-    # dataset_df[fn_marriageStatus_appCategory] = \
-    #     util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['appCategory'])
+    dataset_df[fn_marriageStatus_appCategory] = \
+        util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['appCategory'])
     dataset_df[fn_haveBaby_appCategory] = util.elegant_pairing(dataset_df['haveBaby'], dataset_df['appCategory'])
 
     # 添加 connectionType-appCategory
     dataset_df[fn_appCategory_connectionType] = \
         util.elegant_pairing(dataset_df['connectionType'], dataset_df['appCategory'])
 
-    # 添加 connectionType_telecomsOperator
-    dataset_df[fn_connectionType_telecomsOperator] = \
-        util.elegant_pairing(dataset_df['connectionType'], dataset_df['telecomsOperator'])
-    # 将不明显的类别合并
-    columns_set_inapparent_con_tele = {5, 14, 10, 3}
-    indexer = dataset_df[fn_connectionType_telecomsOperator].isin(columns_set_inapparent_con_tele)
-    dataset_df.loc[indexer, fn_connectionType_telecomsOperator] = 5
+    # # 添加 connectionType_telecomsOperator
+    # dataset_df[fn_connectionType_telecomsOperator] = \
+    #     util.elegant_pairing(dataset_df['connectionType'], dataset_df['telecomsOperator'])
+    # # 将不明显的类别合并
+    # columns_set_inapparent_con_tele = {5, 14, 10, 3}
+    # indexer = dataset_df[fn_connectionType_telecomsOperator].isin(columns_set_inapparent_con_tele)
+    # dataset_df.loc[indexer, fn_connectionType_telecomsOperator] = 5
 
-    # fn_education_hour
-    dataset_df[fn_education_hour] = util.elegant_pairing(dataset_df['education'], dataset_df['hour'])
+    # # fn_education_hour
+    # dataset_df[fn_education_hour] = util.elegant_pairing(dataset_df['education'], dataset_df['hour'])
 
     # fn_gender_age
     dataset_df[fn_gender_age] = util.elegant_pairing(dataset_df['gender'], dataset_df['age'])
 
-    # fn_residence_cat
-    dataset_df = util.add_feature(dataset_df, hdf_residence_cat, reclassify_residence)
-    # 将缺失值填充为 3, 因为这是一个无关紧要的类
-    dataset_df[fn_residence_cat].fillna(4, inplace=True)
+    # # fn_residence_cat
+    # dataset_df = util.add_feature(dataset_df, hdf_residence_cat, reclassify_residence)
+    # # 将缺失值填充为 3, 因为这是一个无关紧要的类
+    # dataset_df[fn_residence_cat].fillna(4, inplace=True)
+
+    # fn_hometown_advertiserID
+    dataset_df[fn_hometown_advertiserID] = util.elegant_pairing(dataset_df['hometown'], dataset_df['advertiserID'])
+    dataset_df = add_conversion_count(dataset_df, fn_hometown_advertiserID)
+
+    # fn_hometown_appID
+    dataset_df[fn_hometown_appID] = util.elegant_pairing(dataset_df['hometown'], dataset_df['appID'])
+    dataset_df = add_conversion_count(dataset_df, fn_hometown_appID)
+
+    # fn_positionID_marriageStatus
+    dataset_df[fn_positionID_marriageStatus] = \
+        util.elegant_pairing(dataset_df['positionID'], dataset_df['marriageStatus'])
+    dataset_df = add_conversion_count(dataset_df, fn_positionID_marriageStatus)
 
     # 添加“该 userID_appID 是否已存在安装行为”的特征
     util.print_constructing_feature(fn_is_installed)

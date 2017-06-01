@@ -87,6 +87,9 @@ fn_is_child_old = 'is_child_old'
 fn_education_hour = 'education_hour'
 fn_gender_age = 'gender_age'
 fn_residence_cat = 'residence_cat'
+fn_hometown_advertiserID = 'hometown_advertiserID'
+fn_hometown_appID = 'hometown_appID'
+fn_positionID_marriageStatus = 'positionID_marriageStatus'
 
 # 注意用 set 而不是 list，以避免在程序中错误地重复添加
 # 那些取值个数较多的特征, 依次为[677, 3447, 6315, 7219, 2595627]
@@ -119,7 +122,7 @@ columns_set_without_count_ratio = {
 # 这里犯错误了，'advertiserID'是一个重要的特征
 columns_set_mismatch = {
     # 'advertiserID',
-    'camgaignID',
+    # 'camgaignID',
     'adID',
     'creativeID',
     'positionID',
@@ -150,6 +153,8 @@ columns_set_inapparent = {
     'haveBaby',
     'telecomsOperator',
     'sitesetID',
+    'connectionType',
+    fn_is_not_wifi
 }
 # 那些可以构造 conversion_ratio 特征的列
 columns_set_to_construct_conversion_ratio = {
@@ -159,15 +164,15 @@ columns_set_to_construct_conversion_ratio = {
     # 'creativeID',
     # 'userID',
     'positionID',
-    'connectionType',
+    # 'connectionType',
     # 'telecomsOperator',
-    'sitesetID',
+    # 'sitesetID',
     'positionType',
     'age',
     # 'gender',
-    'education',
+    # 'education',
     # 'marriageStatus',
-    'haveBaby',
+    # 'haveBaby',
     'hometown',
     'residence',
     'adID',
@@ -176,6 +181,34 @@ columns_set_to_construct_conversion_ratio = {
     'appID',
     'appPlatform',
     'appCategory'
+    # 'hour',
+    # 'week'
+}
+# 那些可以构造 conversion_count 特征的列
+columns_set_to_construct_conversion_count = {
+    # 'label',
+    # 'clickTime',
+    # 'conversionTime',
+    'creativeID',
+    # 'userID',
+    'positionID',
+    # 'connectionType',
+    # 'telecomsOperator',
+    # 'sitesetID',
+    # 'positionType',
+    # 'age',
+    # 'gender',
+    # 'education',
+    # 'marriageStatus',
+    # 'haveBaby',
+    # 'hometown',
+    # 'residence',
+    'adID'
+    # 'camgaignID'
+    # 'advertiserID'
+    # 'appID',
+    # 'appPlatform',
+    # 'appCategory'
     # 'hour',
     # 'week'
 }

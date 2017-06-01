@@ -35,11 +35,14 @@ def one_hot():
     numeric_features_set = set(numeric_features_s)
     categorical_features = \
         ~trainset_df.columns.isin(numeric_features_set | numeric_features_static_set | boolean_features_set)
-    print('numeric_features: ', numeric_features_set | numeric_features_static_set)
+    print('numeric_features: ')
+    for c in numeric_features_set | numeric_features_static_set:
+        print(c)
 
     # X
     from sklearn.preprocessing import OneHotEncoder
     enc = OneHotEncoder(categorical_features=categorical_features)
+    # enc = OneHotEncoder()
     X = enc.fit_transform(trainset_df.values)
     del trainset_df
     gc.collect()
@@ -262,10 +265,15 @@ def tuning_hyper_parameters_lr_sim(n_iter_max=10):
     start = time()
     print('\nStart tuning hyper parameters of lr_sim')
 
+    train_df = pd.read_hdf(path_intermediate_dataset + hdf_train)
+    train_size = train_df.loc[train_df['clickTime'] < 300000].index.size
+    del train_df
+    gc.collect()
+
     # 加载训练集
     X = load_npz(path_modeling_dataset + npz_X).tocsr()
     # 划分出训练集、测试集(注意不能随机划分)
-    train_size = 3353241
+    print('train_size: ', train_size)
     X_train = X[:train_size, :]
     X_test = X[train_size:, :]
     # 手动释放内存
@@ -374,7 +382,7 @@ def tuning_hyper_parameters_lr_sim_avg(train_proportion=0.8):
     from sklearn.ensemble import VotingClassifier
     eclf = VotingClassifier(estimators=[('lr1', clf1), ('lr2', clf2), ('lr3', clf3)], voting='soft')
     eclf.fit(X_train, y_train)
-    
+
     # 打印在训练集，测试集上的 logloss
     from sklearn.metrics import log_loss
     print('logloss in trainset: ', log_loss(y_train, eclf.predict_proba(X_train)))
@@ -547,6 +555,3 @@ def predict_average():
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
-
-
-

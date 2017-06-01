@@ -241,6 +241,43 @@ def f_conversion_ratio(df, column):
     print_stop(start)
 
 
+def f_conversion_count(df, column):
+    """
+    对 df 中的特定 column 构造 conversion_count 特征，并存储到硬盘。
+    :param df: pandas.DataFrame 对象
+    :param column: string, 特定 column
+
+    Notes
+    -----
+    存储到硬盘而不是返回结果，是因为 context_train 和 context_test_ol 都需要这些特征，以方便两者做合并。
+    """
+
+    hdf_out = 'f_conversion_count_' + column + '.h5'
+
+    # click_count_column = 'click_count_' + column
+    conversion_count_column = 'conversion_count_' + column
+
+    # 开始计时，并打印相关信息
+    start = print_start(hdf_out)
+
+    # count = DataFrame(df[column].value_counts())
+    # count.reset_index(inplace=True)
+    # count.columns = [column, click_count_column]
+
+    conversion_count = DataFrame(df.loc[df['label'] == 1, column].value_counts())
+    conversion_count.reset_index(inplace=True)
+    conversion_count.columns = [column, conversion_count_column]
+
+    # del count
+    # gc.collect()
+
+    # 存储
+    safe_save(path_feature, hdf_out, conversion_count)
+
+    # 停止计时，并打印相关信息
+    print_stop(start)
+
+
 def exist_null(df):
     """
     检查一个 DataFrame 中是否有 null.
@@ -425,29 +462,38 @@ def print_all_column_sample_ratio_min_max():
     """
     打印负正样本比例。
     """
+
     start = time()
+
     df = pd.read_hdf(path_feature + hdf_trainset_fg)
-    for c in df.columns:
-        mn = 2 ** 31
-        mx = -2 ** 31
-        key_set = set(df[c].values)
-        for key in key_set:
-            indexer_key = df[c] == key
-            indexer_positive = df['label'] == 1
 
-            sample_num_negative = df.loc[(~indexer_positive) & indexer_key].index.size
-            sample_num_positive = df.loc[indexer_positive & indexer_key].index.size
-            if sample_num_positive != 0:
-                sample_ratio = np.round(sample_num_negative / sample_num_positive, 4)
-            else:
-                sample_ratio = np.nan
+    import csv
+    with open(path_intermediate_dataset + 'sample_ratio.csv', 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=' ',
+                            quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
-            if sample_ratio < mn:
-                mn = sample_ratio
-            if sample_ratio > mx:
-                mx = sample_ratio
-        print('\nsample ratio of {0}'.format(c))
-        print('min: {0}, max: {1}'.format(mn, mx))
+        for c in df.columns:
+            mn = 2 ** 31
+            mx = -2 ** 31
+            key_set = set(df[c].values)
+            for key in key_set:
+                indexer_key = df[c] == key
+                indexer_positive = df['label'] == 1
+
+                sample_num_negative = df.loc[(~indexer_positive) & indexer_key].index.size
+                sample_num_positive = df.loc[indexer_positive & indexer_key].index.size
+                if sample_num_positive != 0:
+                    sample_ratio = np.round(sample_num_negative / sample_num_positive, 4)
+                else:
+                    sample_ratio = np.nan
+
+                if sample_ratio < mn:
+                    mn = sample_ratio
+                if sample_ratio > mx:
+                    mx = sample_ratio
+            writer.writerow(['min', str(mn), 'max', str(mx), c])
+            print('\nsample ratio of {0}'.format(c))
+            print('min: {0}, max: {1}'.format(mn, mx))
     print_stop(start)
 
 
