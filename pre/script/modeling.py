@@ -283,22 +283,22 @@ def tuning_hyper_parameters_lr_sim(n_iter_max=10):
     from sklearn.metrics import log_loss
 
     alphas = np.logspace(-6, -2, 5)
-    alpha_best = 0
+    alpha_best = 0.0001
     log_loss_test_best = 1
-    for alpha in alphas:
-        clf = SGDClassifier(loss='log', alpha=alpha, n_jobs=-1, random_state=42)
-        clf.fit(X_train, y_train)
-
-        # 打印在训练集，测试集上的 logloss
-        log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
-        log_loss_test = log_loss(y_test, clf.predict_proba(X_test))
-        print('alpha: {0}'.format(alpha))
-        print('logloss in trainset: {0:0.6f}, logloss in testset: {1:0.6f}'.format(
-            log_loss_train, log_loss_test))
-
-        if log_loss_test < log_loss_test_best:
-            log_loss_test_best = log_loss_test
-            alpha_best = alpha
+    # for alpha in alphas:
+    #     clf = SGDClassifier(loss='log', alpha=alpha, n_jobs=-1, random_state=42)
+    #     clf.fit(X_train, y_train)
+    #
+    #     # 打印在训练集，测试集上的 logloss
+    #     log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
+    #     log_loss_test = log_loss(y_test, clf.predict_proba(X_test))
+    #     print('alpha: {0}'.format(alpha))
+    #     print('logloss in trainset: {0:0.6f}, logloss in testset: {1:0.6f}'.format(
+    #         log_loss_train, log_loss_test))
+    #
+    #     if log_loss_test < log_loss_test_best:
+    #         log_loss_test_best = log_loss_test
+    #         alpha_best = alpha
 
     n_iter = 1
     n_iter_best = 5
@@ -316,7 +316,7 @@ def tuning_hyper_parameters_lr_sim(n_iter_max=10):
         if log_loss_test <= log_loss_test_best:
             log_loss_test_best = log_loss_test
             n_iter_best = n_iter
-        elif log_loss_test - log_loss_test_best > 0.001:
+        elif log_loss_test - log_loss_test_best > 0.01:
             break
         n_iter += 1
 

@@ -706,9 +706,8 @@ def f_conversion_ratio():
     # 注意与其他也使用 hdf_numeric_features_set 的代码的先后顺序！！！
     util.safe_remove(path_intermediate_dataset + hdf_numeric_features_set)
     # 遍历数据集中的有效特征
-    for c in trainset_df.columns:
-        if c not in (columns_set_without_count_ratio | columns_set_mismatch):
-            util.f_conversion_ratio(trainset_df, c)
+    for c in (trainset_df.columns & columns_set_to_construct_conversion_ratio):
+        util.f_conversion_ratio(trainset_df, c)
 
     del trainset_df
     gc.collect()
@@ -742,27 +741,26 @@ def fg_dataset(hdf_out, hdf_in):
     #         gc.collect()
 
     # 为每个有效特征添加对应的 conversion_ratio 特征
-    for c in dataset_df.columns:
-        if c not in (columns_set_without_count_ratio | columns_set_mismatch | columns_set_without_conversion_ratio):
-            hdf_feature = 'f_conversion_ratio_' + c + '.h5'
-            fn_feature = 'conversion_ratio_' + c
-            # 打印进度信息
-            util.print_constructing_feature(fn_feature)
+    for c in (dataset_df.columns & columns_set_to_construct_conversion_ratio):
+        hdf_feature = 'f_conversion_ratio_' + c + '.h5'
+        fn_feature = 'conversion_ratio_' + c
+        # 打印进度信息
+        util.print_constructing_feature(fn_feature)
 
-            in_file = path_feature + hdf_feature
-            conversion_ratio = pd.read_hdf(in_file)
-            dataset_df = dataset_df.merge(conversion_ratio, how='left', on=c)
-            # 填充缺失值
-            dataset_df[fn_feature].fillna(0, inplace=True)
-            del conversion_ratio
-            gc.collect()
+        in_file = path_feature + hdf_feature
+        conversion_ratio = pd.read_hdf(in_file)
+        dataset_df = dataset_df.merge(conversion_ratio, how='left', on=c)
+        # 填充缺失值
+        dataset_df[fn_feature].fillna(0, inplace=True)
+        del conversion_ratio
+        gc.collect()
 
     # 构造是否 is_not_wifi 特征
     util.print_constructing_feature(fn_is_not_wifi)
     dataset_df[fn_is_not_wifi] = dataset_df['connectionType'] != 1
-    # 构造 is_child_old 特征
-    util.print_constructing_feature(fn_is_child_old)
-    dataset_df[fn_is_child_old] = (dataset_df['age'] <= 10) | (dataset_df['age'] > 60)
+    # # 构造 is_child_old 特征
+    # util.print_constructing_feature(fn_is_child_old)
+    # dataset_df[fn_is_child_old] = (dataset_df['age'] <= 10) | (dataset_df['age'] > 60)
 
     # 加载并添加用户的活跃度特征
     dataset_df = util.add_feature(dataset_df, hdf_user_activity_cat, f_user_activity_cat)
@@ -854,9 +852,9 @@ def fg_dataset(hdf_out, hdf_in):
     #     dataset_df = f_confidence_testset_ol(testset_ol=dataset_df)
 
     # 删除不匹配的, 和不能明显有助于分类的列
-    for c in columns_set_mismatch | columns_set_inapparent | columns_set_useless | columns_set_reclassified:
-        if c in dataset_df.columns:
-            del dataset_df[c]
+    columns_invalid = columns_set_mismatch | columns_set_inapparent | columns_set_useless | columns_set_reclassified
+    columns_val = [x for x in dataset_df.columns if x not in columns_invalid]
+    dataset_df = dataset_df[columns_val]
 
     if 'test' in hdf_in:
         del dataset_df['label']

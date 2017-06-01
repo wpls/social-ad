@@ -143,11 +143,41 @@ columns_set_inapparent = {
     'appPlatform',
     'hour',
     'week',
-    'conversion_ratio_marriageStatus',
-    'conversion_ratio_hour',
-    'conversion_ratio_week',
-    'user_activity',
-    'age'
+    # 'user_activity',
+    'age',
+    'gender',
+    'education',
+    'haveBaby',
+    'telecomsOperator',
+    'sitesetID',
+}
+# 那些可以构造 conversion_ratio 特征的列
+columns_set_to_construct_conversion_ratio = {
+    # 'label',
+    # 'clickTime',
+    # 'conversionTime',
+    # 'creativeID',
+    # 'userID',
+    'positionID',
+    'connectionType',
+    # 'telecomsOperator',
+    'sitesetID',
+    'positionType',
+    'age',
+    # 'gender',
+    'education',
+    # 'marriageStatus',
+    'haveBaby',
+    'hometown',
+    'residence',
+    'adID',
+    'camgaignID',
+    'advertiserID',
+    'appID',
+    'appPlatform',
+    'appCategory'
+    # 'hour',
+    # 'week'
 }
 # 已被重新分类
 columns_set_reclassified = {

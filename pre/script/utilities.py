@@ -412,13 +412,43 @@ def print_all_column_sample_ratio(df):
                 sample_num_negative = df.loc[(df['label'] != 1) & (df[c] == key)].index.size
                 sample_num_positive = df.loc[(df['label'] == 1) & (df[c] == key)].index.size
                 if sample_num_positive != 0:
-                    sample_ratio = int(sample_num_negative / sample_num_positive)
+                    sample_ratio = np.round(sample_num_negative / sample_num_positive, 4)
                 else:
-                    sample_ratio = pd.NaT
+                    sample_ratio = np.nan
                 d[c + '_' + str(key)] = sample_ratio
             res = DataFrame(d, index=['sample_ratio'])
             print(res)
             # print("sample ratio of '{0}': {1}".format(c, int(sample_num_negative / sample_num_positive)))
+
+
+def print_all_column_sample_ratio_min_max():
+    """
+    打印负正样本比例。
+    """
+    start = time()
+    df = pd.read_hdf(path_feature + hdf_trainset_fg)
+    for c in df.columns:
+        mn = 2 ** 31
+        mx = -2 ** 31
+        key_set = set(df[c].values)
+        for key in key_set:
+            indexer_key = df[c] == key
+            indexer_positive = df['label'] == 1
+
+            sample_num_negative = df.loc[(~indexer_positive) & indexer_key].index.size
+            sample_num_positive = df.loc[indexer_positive & indexer_key].index.size
+            if sample_num_positive != 0:
+                sample_ratio = np.round(sample_num_negative / sample_num_positive, 4)
+            else:
+                sample_ratio = np.nan
+
+            if sample_ratio < mn:
+                mn = sample_ratio
+            if sample_ratio > mx:
+                mx = sample_ratio
+        print('\nsample ratio of {0}'.format(c))
+        print('min: {0}, max: {1}'.format(mn, mx))
+    print_stop(start)
 
 
 def get_sample_ratio(df, c):
