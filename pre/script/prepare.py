@@ -144,10 +144,15 @@ def train():
     indexer_valid = (train_df['delta_deadline_min'] >= train_df[column]) | (train_df['label'] == 1)
     train_df = train_df.loc[indexer_valid, original_columns]
 
+    # 分出真正的训练集和验证集
+    valid_df = train_df.loc[train_df['clickTime'] >= 300000]
+    train_df = train_df.loc[train_df['clickTime'] < 300000]
+
     # # 舍弃后一个小时的样本
     # train_df = train_df.loc[(train_df['clickTime'] <= 301220) & ((train_df['clickTime'] / 10000).astype(int) != 19)]
 
     # 存储
+    util.safe_save(path_intermediate_dataset, hdf_valid, valid_df)
     util.safe_save(path_intermediate_dataset, hdf_train, train_df)
 
     # 停止计时，并打印相关信息
@@ -330,9 +335,9 @@ def datatset(hdf_out, hdf_in):
     dataset_df['hour'] = (dataset_df['clickTime'] / 100 % 100).astype(int)
     dataset_df['week'] = (dataset_df['clickTime'] / 10000).astype(int) % 7
 
-    # 如果条件满足，则舍弃后 5 天的负样本
-    if 'train' in hdf_in and discard_negative_last_5_day:
-        dataset_df = dataset_df.loc[(dataset_df['clickTime'] < 260000) | (dataset_df['label'] != 0)]
+    # # 如果条件满足，则舍弃后 5 天的负样本
+    # if 'train' in hdf_in and discard_negative_last_5_day:
+    #     dataset_df = dataset_df.loc[(dataset_df['clickTime'] < 260000) | (dataset_df['label'] != 0)]
 
     # 存储
     util.safe_save(path_intermediate_dataset, hdf_out, dataset_df)
@@ -345,6 +350,10 @@ def datatset(hdf_out, hdf_in):
 
 def trainset():
     datatset(hdf_trainset, hdf_train)
+
+
+def validset():
+    datatset(hdf_validset, hdf_valid)
 
 
 def testset_ol():
@@ -376,6 +385,7 @@ def prepare_dataset_all():
     user_app_cat()
     userID_appID_pair_installed()
     trainset()
+    validset()
     testset_ol()
 
     print('\nThe total time spent on preparing dataset: {0:.0f} s'.format(time() - start))

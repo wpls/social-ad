@@ -23,12 +23,13 @@ def one_hot():
     start = time()
     print('\nStart one hot')
 
+    # ===== train =====
     trainset_df = pd.read_hdf(path_feature + hdf_trainset_fg)
 
-    # y
-    y = trainset_df['label']
+    # y_train
+    y_train = trainset_df['label']
     del trainset_df['label']
-    util.safe_save(path_modeling_dataset, npy_y, y)
+    util.safe_save(path_modeling_dataset, npy_y_train, y_train)
 
     # 区分出类别特征
     numeric_features_s = pd.read_hdf(path_intermediate_dataset + hdf_numeric_features_set)
@@ -38,21 +39,37 @@ def one_hot():
     print('numeric_features: ')
     for c in numeric_features_set | numeric_features_static_set:
         print(c)
+    print('\n')
 
-    # X
+    # X_train
     from sklearn.preprocessing import OneHotEncoder
     enc = OneHotEncoder(categorical_features=categorical_features)
     # enc = OneHotEncoder()
-    X = enc.fit_transform(trainset_df.values)
+    X_train = enc.fit_transform(trainset_df.values)
     del trainset_df
     gc.collect()
-    util.safe_save(path_modeling_dataset, npz_X, X)
+    util.safe_save(path_modeling_dataset, npz_X_train, X_train)
 
-    testset_ol = pd.read_hdf(path_feature + hdf_testset_ol_fg)
+    # ===== valid =====
+    validset_df = pd.read_hdf(path_feature + hdf_validset_fg)
+
+    # y_valid
+    y_valid = validset_df['label']
+    del validset_df['label']
+    util.safe_save(path_modeling_dataset, npy_y_valid, y_valid)
+
+    # X_valid
+    X_valid = enc.transform(validset_df.values)
+    del validset_df
+    gc.collect()
+    util.safe_save(path_modeling_dataset, npz_X_valid, X_valid)
+
+    # ===== test_ol =====
+    testset_ol_df = pd.read_hdf(path_feature + hdf_testset_ol_fg)
 
     # X_test_ol
-    X_test_ol = enc.transform(testset_ol.values)
-    del testset_ol
+    X_test_ol = enc.transform(testset_ol_df.values)
+    del testset_ol_df
     gc.collect()
     util.safe_save(path_modeling_dataset, npz_X_test_ol, X_test_ol)
 
@@ -265,26 +282,12 @@ def tuning_hyper_parameters_lr_sim(n_iter_max=10):
     start = time()
     print('\nStart tuning hyper parameters of lr_sim')
 
-    train_df = pd.read_hdf(path_intermediate_dataset + hdf_train)
-    train_size = train_df.loc[train_df['clickTime'] < 300000].index.size
-    del train_df
-    gc.collect()
+    # 加载
+    X_train = load_npz(path_modeling_dataset + npz_X_train).tocsr()
+    X_valid = load_npz(path_modeling_dataset + npz_X_valid).tocsr()
 
-    # 加载训练集
-    X = load_npz(path_modeling_dataset + npz_X).tocsr()
-    # 划分出训练集、测试集(注意不能随机划分)
-    print('train_size: ', train_size)
-    X_train = X[:train_size, :]
-    X_test = X[train_size:, :]
-    # 手动释放内存
-    del X
-
-    y = np.load(path_modeling_dataset + npy_y)
-    y_train = y[:train_size]
-    y_test = y[train_size:]
-    # 手动释放内存
-    del y
-    gc.collect()
+    y_train = np.load(path_modeling_dataset + npy_y_train)
+    y_valid = np.load(path_modeling_dataset + npy_y_valid)
 
     # 训练模型
     from sklearn.linear_model import SGDClassifier
@@ -292,21 +295,21 @@ def tuning_hyper_parameters_lr_sim(n_iter_max=10):
 
     alphas = np.logspace(-6, -2, 5)
     alpha_best = 0.0001
-    log_loss_test_best = 1
-    # for alpha in alphas:
-    #     clf = SGDClassifier(loss='log', alpha=alpha, n_jobs=-1, random_state=42)
-    #     clf.fit(X_train, y_train)
-    #
-    #     # 打印在训练集，测试集上的 logloss
-    #     log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
-    #     log_loss_test = log_loss(y_test, clf.predict_proba(X_test))
-    #     print('alpha: {0}'.format(alpha))
-    #     print('logloss in trainset: {0:0.6f}, logloss in testset: {1:0.6f}'.format(
-    #         log_loss_train, log_loss_test))
-    #
-    #     if log_loss_test < log_loss_test_best:
-    #         log_loss_test_best = log_loss_test
-    #         alpha_best = alpha
+    log_loss_valid_best = 1
+    for alpha in alphas:
+        clf = SGDClassifier(loss='log', alpha=alpha, n_jobs=-1, random_state=42)
+        clf.fit(X_train, y_train)
+
+        # 打印在训练集，测试集上的 logloss
+        log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
+        log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
+        print('alpha: {0}'.format(alpha))
+        print('logloss in trainset: {0:0.6f}, logloss in validset: {1:0.6f}'.format(
+            log_loss_train, log_loss_valid))
+
+        if log_loss_valid < log_loss_valid_best:
+            log_loss_valid_best = log_loss_valid
+            alpha_best = alpha
 
     n_iter = 1
     n_iter_best = 5
@@ -316,28 +319,28 @@ def tuning_hyper_parameters_lr_sim(n_iter_max=10):
 
         # 打印在训练集，测试集上的 logloss
         log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
-        log_loss_test = log_loss(y_test, clf.predict_proba(X_test))
+        log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
         print('alpha: {0}, n_iter: {1}'.format(alpha_best, n_iter))
-        print('logloss in trainset: {0:0.6f}, logloss in testset: {1:0.6f}'.format(
-            log_loss_train, log_loss_test))
+        print('logloss in trainset: {0:0.6f}, logloss in validset: {1:0.6f}'.format(
+            log_loss_train, log_loss_valid))
 
-        if log_loss_test <= log_loss_test_best:
-            log_loss_test_best = log_loss_test
+        if log_loss_valid <= log_loss_valid_best:
+            log_loss_valid_best = log_loss_valid
             n_iter_best = n_iter
-        elif log_loss_test - log_loss_test_best > 0.01:
+        elif log_loss_valid - log_loss_valid_best > 0.01:
             break
         n_iter += 1
 
-    print('\nbest alpha: {0}, best n_iter: {1}, best log_loss_test: {2:0.6f}'.format(
-        alpha_best, n_iter_best, log_loss_test_best))
+    print('\nbest alpha: {0}, best n_iter: {1}, best log_loss_valid: {2:0.6f}'.format(
+        alpha_best, n_iter_best, log_loss_valid_best))
     clf_best = SGDClassifier(loss='log', alpha=alpha_best, n_iter=n_iter_best, n_jobs=-1, random_state=42)
     clf_best.fit(X_train, y_train)
 
     # 手动释放内存
     del X_train
     del y_train
-    del X_test
-    del y_test
+    del X_valid
+    del y_valid
     gc.collect()
 
     # 存储模型

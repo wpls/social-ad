@@ -808,6 +808,7 @@ def fg_dataset(hdf_out, hdf_in):
     # 添加二次组合特征 user(age, gender, education, residence)-connectionType
     util.print_constructing_feature('secondary combination feature')
     dataset_df[fn_age_connectionType] = util.elegant_pairing(dataset_df['age'], dataset_df['connectionType'])
+    # dataset_df[fn_haveBaby_connectionType] =util.elegant_pairing(dataset_df['haveBaby'], dataset_df['connectionType'])
     # dataset_df[fn_gender_connectionType] = util.elegant_pairing(dataset_df['gender'], dataset_df['connectionType'])
     # dataset_df[fn_education_connectionType] = \
     #     util.elegant_pairing(dataset_df['education'], dataset_df['connectionType'])
@@ -852,11 +853,11 @@ def fg_dataset(hdf_out, hdf_in):
     # 添加“该 userID_appID 是否已存在安装行为”的特征
     util.print_constructing_feature(fn_is_installed)
     # 从 action 数据构造
-    if 'train' in hdf_in:
-        dataset_df = f_is_installed_from_action_trainset(dataset_df)
-    elif 'test' in hdf_in:
+    if 'test' in hdf_in:
         dataset_df = f_is_installed_from_action_testset_ol(dataset_df)
         dataset_df = f_is_installed_from_trainset_testset_ol(dataset_df)
+    else:
+        dataset_df = f_is_installed_from_action_trainset(dataset_df)
     # 从 user_app 数据构造
     if 'userID_appID' not in dataset_df.columns:
         dataset_df['userID_appID'] = util.elegant_pairing(dataset_df['userID'], dataset_df['appID'])
@@ -903,9 +904,15 @@ def fg_dataset(hdf_out, hdf_in):
 def fg_trainset():
     """
     为 trainset 添加已经构造好的特征。
-    :return: 
     """
     fg_dataset(hdf_trainset_fg, hdf_trainset)
+
+
+def fg_validset():
+    """
+    为 validset 添加已经构造好的特征。
+    """
+    fg_dataset(hdf_validset_fg, hdf_validset)
 
 
 def fg_testset_ol():
@@ -973,6 +980,7 @@ def construct_feature():
     f_conversion_count()
     f_conversion_count_combi()
     fg_trainset()
+    fg_validset()
     fg_testset_ol()
 
     print('\nThe total time spent on constructing feature: {0:.2f} s'.format(time() - start))

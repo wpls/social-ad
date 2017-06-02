@@ -35,10 +35,13 @@ hdf_action = 'action.h5'
 hdf_user = 'user.h5'
 hdf_user_app = 'user_app.h5'
 
+hdf_valid = 'valid.h5'
+
 # 计算的中间结果（以此减少内存占用）
 hdf_user_app_cat = 'user_app_cat.h5'
 hdf_userID_appID_pair_installed = 'userID_appID_pair_installed.h5'
 hdf_trainset = 'trainset.h5'
+hdf_validset = 'validset.h5'
 hdf_testset_ol = 'testset_ol.h5'
 
 # 从单个原始特征中提取出的特征
@@ -71,6 +74,7 @@ fn_marriageStatus_connectionType = 'marriageStatus_connectionType'
 fn_residence_connectionType = 'residence_connectionType'
 fn_appCategory_connectionType = 'appCategory_connectionType'
 fn_connectionType_telecomsOperator = 'connectionType_telecomsOperator'
+fn_haveBaby_connectionType = 'haveBaby_connectionType'
 fn_appID_connectionType = 'appID_connectionType'
 fn_appID_is_wifi = 'appID_is_wifi'
 
@@ -232,6 +236,7 @@ hdf_user_fg = 'fg_user.h5'
 
 # 合并后的特征群文件
 hdf_trainset_fg = 'fg_trainset.h5'
+hdf_validset_fg = 'fg_validset.h5'
 hdf_testset_ol_fg = 'fg_testset_ol.h5'
 
 # 稀疏矩阵, 一次项
@@ -252,6 +257,7 @@ npz_ad_context_test_ol = 'ad_context_test_ol.npz'
 # ndarray
 npy_y = 'y.npy'
 npy_y_train = 'y_train.npy'
+npy_y_valid = 'y_valid.npy'
 npy_y_test = 'y_test.npy'
 
 # 稀疏矩阵，合并后的数据
@@ -264,6 +270,7 @@ npz_X_test_ol = 'X_test_ol.npz'
 
 # 稀疏矩阵，建模数据
 npz_X_train = 'X_train.npz'
+npz_X_valid = 'X_valid.npz'
 npz_X_test = 'X_test.npz'
 
 # cv_result
