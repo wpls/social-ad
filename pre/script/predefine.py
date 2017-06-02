@@ -212,6 +212,12 @@ columns_set_to_construct_conversion_count = {
     # 'hour',
     # 'week'
 }
+# 那些可以构造 conversion_count 特征的二次组合特征
+columns_set_to_construct_conversion_count_combi = {
+    'hometown_advertiserID',
+    'hometown_appID',
+    'positionID_marriageStatus'
+}
 # 已被重新分类
 columns_set_reclassified = {
     'residence',

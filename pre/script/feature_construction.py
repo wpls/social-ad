@@ -245,52 +245,6 @@ def reclassify_residence():
     util.print_stop(start)
 
 
-def fg_user():
-    out_file = path_intermediate_dataset + hdf_user_fg
-    if util.is_exist(out_file):
-        return
-
-    # 开始计时，并打印相关信息
-    start = util.print_start(hdf_user_fg)
-
-    # 加载 user 数据
-    user = pd.read_hdf(path_intermediate_dataset + hdf_user)
-
-    # 加载并添加用户的活跃度特征
-    in_file = path_intermediate_dataset + hdf_user_activity
-    if not os.path.exists(in_file):
-        f_user_activity()
-    user_activity = pd.read_hdf(in_file)
-    user = user.merge(user_activity, how='left', on='userID')
-
-    # 手动释放内存
-    del user_activity
-    gc.collect()
-
-    # 将 user_activity 的 NaN 填充为 5
-    user[fn_user_activity].fillna(5, inplace=True)
-
-    # 加载并添加用户对app的品类偏好特征
-    in_file = path_intermediate_dataset + hdf_user_pref_cat
-    if not os.path.exists(in_file):
-        f_user_pref_cat()
-    user_pref_cat = pd.read_hdf(in_file)
-    user = user.merge(user_pref_cat, how='left', on='userID')
-
-    # 手动释放内存
-    del user_pref_cat
-    gc.collect()
-
-    # 将 cat_pref 的 NaN 填充为 0
-    user[fn_cat_pref].fillna(0, inplace=True)
-
-    # 存储
-    util.safe_save(path_intermediate_dataset, hdf_user_fg, user)
-
-    # 停止计时，并打印相关信息
-    util.print_stop(start)
-
-
 # ========== feature construction context ==========
 
 # 暂时没用
@@ -729,19 +683,32 @@ def f_conversion_count():
     gc.collect()
 
 
-def add_conversion_count(df, column):
-    conversion_count_column = 'conversion_count_' + column
-    util.print_constructing_feature(conversion_count_column)
+def f_conversion_count_combi():
+    """
+    为 hdf_datatset 中的二次组合特征构造 conversion_count 特征，并存储到硬盘。
+    """
 
-    conversion_count = DataFrame(df.loc[df['label'] == 1, column].value_counts())
-    conversion_count.reset_index(inplace=True)
-    conversion_count.columns = [column, conversion_count_column]
+    # 加载数据集
+    trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+    columns = trainset_df.columns.tolist()
 
-    df = df.merge(conversion_count, how='left', on=column)
-    df[conversion_count_column].fillna(0, inplace=True)
-    del df[column]
+    # 遍历数据集中的有效特征
+    for c in columns_set_to_construct_conversion_count_combi:
+        col1, col2 = c.split('_')
+        flag1 = col1 in columns
+        flag2 = col2 in columns
+        if flag1 and flag2:
+            trainset_df[c] = util.elegant_pairing(trainset_df[col1], trainset_df[col2])
+            util.f_conversion_count(trainset_df, c)
+            # 删除二次组合特征本身
+            del trainset_df[c]
+        if not flag1:
+            print('{0} is not exist.'.format(col1))
+        if not flag2:
+            print('{0} is not exist.'.format(col2))
 
-    return df
+    del trainset_df
+    gc.collect()
 
 
 def fg_dataset(hdf_out, hdf_in):
@@ -786,6 +753,29 @@ def fg_dataset(hdf_out, hdf_in):
         fn_feature = 'conversion_count_' + c
         # 添加特征
         dataset_df = util.add_feature(dataset_df, hdf_feature, f_conversion_count)
+        # 填充缺失值
+        dataset_df[fn_feature].fillna(0, inplace=True)
+
+    # 为每个有效的‘二次组合特征特征’添加对应的 conversion_count 特征, 暂时先放在这里，
+    # 如果后面要在新添加的特征上做组合，到时候再修改代码
+    for c in columns_set_to_construct_conversion_count_combi:
+        hdf_feature = 'f_conversion_count_' + c + '.h5'
+        fn_feature = 'conversion_count_' + c
+        # 添加二次组合项
+        columns = dataset_df.columns.tolist()
+        col1, col2 = c.split('_')
+        flag1 = col1 in columns
+        flag2 = col2 in columns
+        if flag1 and flag2:
+            dataset_df[c] = util.elegant_pairing(dataset_df[col1], dataset_df[col2])
+        if not flag1:
+            print('{0} is not exist.'.format(col1))
+        if not flag2:
+            print('{0} is not exist.'.format(col2))
+        # 添加特征
+        dataset_df = util.add_feature(dataset_df, hdf_feature, f_conversion_count)
+        # 删除二次组合特征本身
+        del dataset_df[c]
         # 填充缺失值
         dataset_df[fn_feature].fillna(0, inplace=True)
 
@@ -858,19 +848,6 @@ def fg_dataset(hdf_out, hdf_in):
     # dataset_df = util.add_feature(dataset_df, hdf_residence_cat, reclassify_residence)
     # # 将缺失值填充为 3, 因为这是一个无关紧要的类
     # dataset_df[fn_residence_cat].fillna(4, inplace=True)
-
-    # fn_hometown_advertiserID
-    dataset_df[fn_hometown_advertiserID] = util.elegant_pairing(dataset_df['hometown'], dataset_df['advertiserID'])
-    dataset_df = add_conversion_count(dataset_df, fn_hometown_advertiserID)
-
-    # fn_hometown_appID
-    dataset_df[fn_hometown_appID] = util.elegant_pairing(dataset_df['hometown'], dataset_df['appID'])
-    dataset_df = add_conversion_count(dataset_df, fn_hometown_appID)
-
-    # fn_positionID_marriageStatus
-    dataset_df[fn_positionID_marriageStatus] = \
-        util.elegant_pairing(dataset_df['positionID'], dataset_df['marriageStatus'])
-    dataset_df = add_conversion_count(dataset_df, fn_positionID_marriageStatus)
 
     # 添加“该 userID_appID 是否已存在安装行为”的特征
     util.print_constructing_feature(fn_is_installed)
@@ -993,6 +970,8 @@ def construct_feature():
     # merge_testset_ol()
     # f_count_ratio()
     f_conversion_ratio()
+    f_conversion_count()
+    f_conversion_count_combi()
     fg_trainset()
     fg_testset_ol()
 

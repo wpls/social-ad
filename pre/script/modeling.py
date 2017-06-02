@@ -479,6 +479,11 @@ def predict_test_ol_lr():
     submission.set_index('instanceID', inplace=True)
     submission.sort_index(inplace=True)
 
+    # 看一下提交数据集的统计数据
+    print('\nstatistics: ')
+    print(submission['prob'].describe())
+    print('\n')
+
     # # 对于那些已经有安装行为的 'userID-appID', 应该都预测为0
     # submission.loc[submission['userID-appID'].isin(userID_appID_test), 'prob'] = 0
     # # 删除 userID-appID 列
