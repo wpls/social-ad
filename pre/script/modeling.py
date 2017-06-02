@@ -293,11 +293,12 @@ def tuning_hyper_parameters_lr_sim(n_iter_max=10):
     from sklearn.linear_model import SGDClassifier
     from sklearn.metrics import log_loss
 
-    alphas = np.logspace(-6, -2, 5)
+    # alphas = np.logspace(-6, -2, 5)
+    alphas = [0.000001, 0.000005, 0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005]
     alpha_best = 0.0001
     log_loss_valid_best = 1
     for alpha in alphas:
-        clf = SGDClassifier(loss='log', alpha=alpha, n_jobs=-1, random_state=42)
+        clf = SGDClassifier(loss='log', alpha=alpha, n_iter=6, n_jobs=-1, random_state=42)
         clf.fit(X_train, y_train)
 
         # 打印在训练集，测试集上的 logloss

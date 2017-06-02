@@ -84,6 +84,16 @@ fn_education_appCategory = 'education_appCategory'
 fn_marriageStatus_appCategory = 'marriageStatus_appCategory'
 fn_haveBaby_appCategory = 'haveBaby_appCategory'
 
+# 超弱组合
+fn_hometown_residence = 'hometown_residence'
+fn_age_hometown = 'age_hometown'
+fn_age_residence = 'age_residence'
+
+# 中弱组合
+fn_positionType_appCategory = 'positionType_appCategory'
+fn_residence_appCategory = 'residence_appCategory'
+fn_hometown_appCategory = 'hometown_appCategory'
+
 fn_cat_pref = 'cat_pref'
 fn_is_pref_cat = 'is_pref_cat'
 fn_is_child_old = 'is_child_old'
@@ -94,6 +104,11 @@ fn_residence_cat = 'residence_cat'
 fn_hometown_advertiserID = 'hometown_advertiserID'
 fn_hometown_appID = 'hometown_appID'
 fn_positionID_marriageStatus = 'positionID_marriageStatus'
+
+# 牛逼组合
+fn_creativeID_residence = 'creativeID_residence'
+fn_creativeID_hour = 'creativeID_hour'
+fn_age_camgaignID = 'age_camgaignID'
 
 # 注意用 set 而不是 list，以避免在程序中错误地重复添加
 # 那些取值个数较多的特征, 依次为[677, 3447, 6315, 7219, 2595627]
@@ -127,9 +142,9 @@ columns_set_without_count_ratio = {
 columns_set_mismatch = {
     # 'advertiserID',
     # 'camgaignID',
-    'adID',
+    # 'adID',
     'creativeID',
-    'positionID',
+    # 'positionID',
     'userID'
 }
 # 不构造转化率的列
@@ -193,9 +208,9 @@ columns_set_to_construct_conversion_count = {
     # 'label',
     # 'clickTime',
     # 'conversionTime',
-    'creativeID',
+    # 'creativeID',
     # 'userID',
-    'positionID',
+    # 'positionID',
     # 'connectionType',
     # 'telecomsOperator',
     # 'sitesetID',
@@ -207,7 +222,7 @@ columns_set_to_construct_conversion_count = {
     # 'haveBaby',
     # 'hometown',
     # 'residence',
-    'adID'
+    # 'adID'
     # 'camgaignID'
     # 'advertiserID'
     # 'appID',
@@ -218,9 +233,11 @@ columns_set_to_construct_conversion_count = {
 }
 # 那些可以构造 conversion_count 特征的二次组合特征
 columns_set_to_construct_conversion_count_combi = {
-    'hometown_advertiserID',
-    'hometown_appID',
-    'positionID_marriageStatus'
+    # 'hometown_advertiserID',
+    # 'hometown_appID',
+    # 'positionID_marriageStatus'
+    # 'creativeID_residence'
+    # 'creativeID_age'
 }
 # 已被重新分类
 columns_set_reclassified = {
