@@ -805,48 +805,8 @@ def fg_dataset(hdf_out, hdf_in):
     # 将 app_popularity 的 NaN 填充为 6, 因为这是一个无关紧要的类（回头仔细想一下这种方式对不对）
     dataset_df[fn_app_popularity].fillna(0, inplace=True)
 
-    # 添加二次组合特征 user(age, gender, education, residence)-connectionType
-    util.print_constructing_feature('secondary combination feature')
-    # dataset_df[fn_age_connectionType] = util.elegant_pairing(dataset_df['age'], dataset_df['connectionType'])
-    # dataset_df[fn_haveBaby_connectionType] =util.elegant_pairing(dataset_df['haveBaby'], dataset_df['connectionType'])
-    # dataset_df[fn_gender_connectionType] = util.elegant_pairing(dataset_df['gender'], dataset_df['connectionType'])
-    # dataset_df[fn_education_connectionType] = \
-    #     util.elegant_pairing(dataset_df['education'], dataset_df['connectionType'])
-    # dataset_df[fn_marriageStatus_connectionType] = \
-    #     util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['connectionType'])
-    # dataset_df[fn_residence_connectionType] = \
-    #     util.elegant_pairing(dataset_df['residence'], dataset_df['connectionType'])
-
-    dataset_df[fn_appID_is_wifi] = \
-        util.elegant_pairing(dataset_df['appID'], dataset_df[fn_is_not_wifi])
-
-    # 添加二次组合特征 user-appCategory
-    dataset_df[fn_residence_appCategory] = util.elegant_pairing(dataset_df['residence'], dataset_df['appCategory'])
-    dataset_df[fn_hometown_appCategory] = util.elegant_pairing(dataset_df['hometown'], dataset_df['appCategory'])
-    dataset_df[fn_age_appCategory] = util.elegant_pairing(dataset_df['age'], dataset_df['appCategory'])
-    dataset_df[fn_gender_appCategory] = util.elegant_pairing(dataset_df['gender'], dataset_df['appCategory'])
-    dataset_df[fn_education_appCategory] = util.elegant_pairing(dataset_df['education'], dataset_df['appCategory'])
-    dataset_df[fn_marriageStatus_appCategory] = \
-        util.elegant_pairing(dataset_df['marriageStatus'], dataset_df['appCategory'])
-    dataset_df[fn_haveBaby_appCategory] = util.elegant_pairing(dataset_df['haveBaby'], dataset_df['appCategory'])
-
-    # 添加 connectionType-appCategory
-    dataset_df[fn_appCategory_connectionType] = \
-        util.elegant_pairing(dataset_df['connectionType'], dataset_df['appCategory'])
-
-    # 牛逼组合,一旦添加组合就可以把本身注释掉
-    dataset_df[fn_creativeID_residence] = util.elegant_pairing(dataset_df['creativeID'], dataset_df['residence'])
-    dataset_df[fn_creativeID_hour] = util.elegant_pairing(dataset_df['creativeID'], dataset_df['hour'])
-    dataset_df[fn_age_camgaignID] = util.elegant_pairing(dataset_df['age'], dataset_df['camgaignID'])
-
-    # # 超弱组合
-    # dataset_df[fn_hometown_residence] = util.elegant_pairing(dataset_df['hometown'], dataset_df['residence'])
-    # dataset_df[fn_age_hometown] = util.elegant_pairing(dataset_df['age'], dataset_df['hometown'])
-    # dataset_df[fn_age_residence] = util.elegant_pairing(dataset_df['age'], dataset_df['residence'])
-
-    # 中弱组合
-    # dataset_df[fn_positionType_appCategory] = \
-    #     util.elegant_pairing(dataset_df['positionType'], dataset_df['appCategory'])
+    # 添加二次组合特征
+    dataset_df = util.add_combi_feature(dataset_df)
 
     # # 添加 connectionType_telecomsOperator
     # dataset_df[fn_connectionType_telecomsOperator] = \
@@ -855,12 +815,6 @@ def fg_dataset(hdf_out, hdf_in):
     # columns_set_inapparent_con_tele = {5, 14, 10, 3}
     # indexer = dataset_df[fn_connectionType_telecomsOperator].isin(columns_set_inapparent_con_tele)
     # dataset_df.loc[indexer, fn_connectionType_telecomsOperator] = 5
-
-    # # fn_education_hour
-    # dataset_df[fn_education_hour] = util.elegant_pairing(dataset_df['education'], dataset_df['hour'])
-
-    # # fn_gender_age
-    # dataset_df[fn_gender_age] = util.elegant_pairing(dataset_df['gender'], dataset_df['age'])
 
     # # fn_residence_cat
     # dataset_df = util.add_feature(dataset_df, hdf_residence_cat, reclassify_residence)

@@ -143,7 +143,7 @@ columns_set_mismatch = {
     # 'advertiserID',
     # 'camgaignID',
     # 'adID',
-    'creativeID',
+    # 'creativeID',
     # 'positionID',
     'userID'
 }
@@ -244,6 +244,17 @@ columns_set_reclassified = {
     'residence',
     'age'
 }
+# 组合特征集合
+combi_feature = [
+    ['appID', fn_is_not_wifi],
+    ['hometown', 'appCategory'],
+    ['age', 'appCategory'],
+    ['gender', 'appCategory'],
+    ['education', 'appCategory'],
+    ['marriageStatus', 'appCategory'],
+    ['haveBaby', 'appCategory'],
+    ['connectionType', 'appCategory'],
+]
 
 # 特征群文件
 hdf_context_dataset_fg = 'fg_context_dataset.h5'

@@ -431,7 +431,7 @@ def print_constructing_feature(fn_feature):
     打印正在构造的特征的信息。
     :return:
     """
-    print('Constructing feature: {0}...'.format(fn_feature))
+    print('[Constructing feature]: {0}...'.format(fn_feature))
 
 
 def print_all_column_sample_ratio(df):
@@ -548,4 +548,18 @@ def assign_new_cat(df, column, new_cat_list):
     for cat_label in range(len(new_cat_list)):
         indexer = df[column].isin(new_cat_list[cat_label])
         df.loc[indexer, new_column] = cat_label
+    return df
+
+
+def add_combi_feature(df):
+    """
+    根据二次组合特征列表添加组合特征。
+    :param df:
+    :return:
+    """
+
+    for f1, f2 in combi_feature:
+        f = f1 + '_' + f2
+        print_constructing_feature(f)
+        df[f] = elegant_pairing(df[f1], df[f2])
     return df
