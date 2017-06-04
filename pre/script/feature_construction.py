@@ -545,10 +545,10 @@ def f_confidence_testset_ol(testset_ol):
     return testset_ol
 
 
-def f_is_installed_from_action_trainset(trainset_df):
+def f_is_installed_from_action_for_train_and_valid(df):
     """
     根据 action 数据构造 fn_is_installed 特征。
-    :param trainset_df:
+    :param df:
     :return:
     """
 
@@ -556,22 +556,22 @@ def f_is_installed_from_action_trainset(trainset_df):
     action_df['userID_appID'] = util.elegant_pairing(action_df['userID'], action_df['appID'])
 
     # 判断 trainset_df 中是否存在 userID_appID 列
-    if 'userID_appID' not in trainset_df.columns:
-        trainset_df['userID_appID'] = util.elegant_pairing(trainset_df['userID'], trainset_df['appID'])
+    if 'userID_appID' not in df.columns:
+        df['userID_appID'] = util.elegant_pairing(df['userID'], df['appID'])
 
     # 合并
-    trainset_df = trainset_df.merge(action_df[['userID_appID', 'installTime']], how='left', on='userID_appID')
+    df = df.merge(action_df[['userID_appID', 'installTime']], how='left', on='userID_appID')
 
-    trainset_df[fn_is_installed] = trainset_df['clickTime'] > trainset_df['installTime']
+    df[fn_is_installed] = df['clickTime'] > df['installTime']
 
-    del trainset_df['installTime']
+    del df['installTime']
     del action_df
     gc.collect()
 
-    return trainset_df
+    return df
 
 
-def f_is_installed_from_action_testset_ol(testset_ol_df):
+def f_is_installed_from_action_for_test_ol(testset_ol_df):
     """
     根据 action 数据构造 fn_is_installed 特征。
     :param testset_ol_df:
@@ -596,7 +596,73 @@ def f_is_installed_from_action_testset_ol(testset_ol_df):
     return testset_ol_df
 
 
-def f_is_installed_from_trainset_testset_ol(testset_ol_df):
+def f_is_installed_from_self(df):
+    """
+    根据 自身 数据构造 fn_is_installed 特征。只使用于train和valid
+    :param df:
+    :return:
+    """
+
+    # 判断 df 中是否存在 userID_appID 列
+    if 'userID_appID' not in df.columns:
+        df['userID_appID'] = util.elegant_pairing(df['userID'], df['appID'])
+
+    indexer_pos = df['label'] == 1
+    indexer_pos_unique = ~df.loc[indexer_pos, 'userID_appID'].duplicated(keep='last')
+    userID_appID_pos_unique = df.loc[indexer_pos & indexer_pos_unique].copy()
+    userID_appID_pos_unique.rename(columns={'clickTime': 'installTime'}, inplace=True)
+
+    # 合并
+    df = df.merge(userID_appID_pos_unique[['userID_appID', 'installTime']], how='left', on='userID_appID')
+    del userID_appID_pos_unique
+    del indexer_pos
+    del indexer_pos_unique
+    gc.collect()
+    # 构造特征
+    if fn_is_installed not in df.columns:
+        df[fn_is_installed] = df['clickTime'] > df['installTime']
+    else:
+        df[fn_is_installed] |= df['clickTime'] > df['installTime']
+
+    del df['installTime']
+    gc.collect()
+
+    return df
+
+
+def f_is_installed_from_trainset_for_valid(validset_df):
+    """
+    根据 trainset 数据构造 fn_is_installed 特征。
+    :param validset_df:
+    :return:
+    """
+
+    trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+
+    indexer_positive = trainset_df['label'] == 1
+    if 'userID_appID' not in trainset_df.columns:
+        userID_appID_pos_arr = util.elegant_pairing(
+            trainset_df.loc[indexer_positive, 'userID'],
+            trainset_df.loc[indexer_positive, 'appID'])
+    else:
+        userID_appID_pos_arr = trainset_df.loc[indexer_positive, 'userID_appID']
+
+    # 判断 testset_ol_df 中是否存在 userID_appID 列
+    if 'userID_appID' not in validset_df.columns:
+        validset_df['userID_appID'] = util.elegant_pairing(validset_df['userID'], validset_df['appID'])
+
+    if fn_is_installed not in validset_df.columns:
+        validset_df[fn_is_installed] = validset_df['userID_appID'].isin(userID_appID_pos_arr)
+    else:
+        validset_df[fn_is_installed] |= validset_df['userID_appID'].isin(userID_appID_pos_arr)
+
+    del trainset_df
+    gc.collect()
+
+    return validset_df
+
+
+def f_is_installed_from_trainset_for_test_ol(testset_ol_df):
     """
     根据 trainset 数据构造 fn_is_installed 特征。
     :param testset_ol_df:
@@ -607,22 +673,54 @@ def f_is_installed_from_trainset_testset_ol(testset_ol_df):
 
     indexer_positive = trainset_df['label'] == 1
     if 'userID_appID' not in trainset_df.columns:
-        userID_appID_arr = util.elegant_pairing(
+        userID_appID_pos_arr = util.elegant_pairing(
             trainset_df.loc[indexer_positive, 'userID'],
             trainset_df.loc[indexer_positive, 'appID'])
     else:
-        userID_appID_arr = trainset_df.loc[indexer_positive, 'userID_appID']
+        userID_appID_pos_arr = trainset_df.loc[indexer_positive, 'userID_appID']
 
     # 判断 testset_ol_df 中是否存在 userID_appID 列
     if 'userID_appID' not in testset_ol_df.columns:
         testset_ol_df['userID_appID'] = util.elegant_pairing(testset_ol_df['userID'], testset_ol_df['appID'])
 
     if fn_is_installed not in testset_ol_df.columns:
-        testset_ol_df[fn_is_installed] = testset_ol_df['userID_appID'].isin(userID_appID_arr)
+        testset_ol_df[fn_is_installed] = testset_ol_df['userID_appID'].isin(userID_appID_pos_arr)
     else:
-        testset_ol_df[fn_is_installed] |= testset_ol_df['userID_appID'].isin(userID_appID_arr)
+        testset_ol_df[fn_is_installed] |= testset_ol_df['userID_appID'].isin(userID_appID_pos_arr)
 
     del trainset_df
+    gc.collect()
+
+    return testset_ol_df
+
+
+def f_is_installed_from_validset_test_ol(testset_ol_df):
+    """
+    根据 trainset 数据构造 fn_is_installed 特征。
+    :param testset_ol_df:
+    :return:
+    """
+
+    validset_df = pd.read_hdf(path_intermediate_dataset + hdf_validset)
+
+    indexer_positive = validset_df['label'] == 1
+    if 'userID_appID' not in validset_df.columns:
+        userID_appID_pos_arr = util.elegant_pairing(
+            validset_df.loc[indexer_positive, 'userID'],
+            validset_df.loc[indexer_positive, 'appID'])
+    else:
+        userID_appID_pos_arr = validset_df.loc[indexer_positive, 'userID_appID']
+
+    # 判断 testset_ol_df 中是否存在 userID_appID 列
+    if 'userID_appID' not in testset_ol_df.columns:
+        testset_ol_df['userID_appID'] = util.elegant_pairing(testset_ol_df['userID'], testset_ol_df['appID'])
+
+    if fn_is_installed not in testset_ol_df.columns:
+        testset_ol_df[fn_is_installed] = testset_ol_df['userID_appID'].isin(userID_appID_pos_arr)
+    else:
+        testset_ol_df[fn_is_installed] |= testset_ol_df['userID_appID'].isin(userID_appID_pos_arr)
+
+    del validset_df
     gc.collect()
 
     return testset_ol_df
@@ -671,7 +769,7 @@ def f_conversion_count():
     trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
 
     # 遍历数据集中的有效特征
-    for c in (trainset_df.columns & columns_set_to_construct_conversion_count):
+    for c in (set(trainset_df.columns) & columns_set_to_construct_conversion_count):
         util.f_conversion_count(trainset_df, c)
 
     del trainset_df
@@ -704,6 +802,56 @@ def f_conversion_count_combi():
 
     del trainset_df
     gc.collect()
+
+
+def f_user_hour_install_prob():
+    """
+    提取user的一些特征在某个时间点有安装行为的可能性。
+    :return:
+    """
+
+    # out_file = path_feature + hdf_age_hour_install_prob
+    # if util.is_exist(out_file):
+    #     return
+
+    action_df = pd.read_hdf(path_intermediate_dataset + hdf_action)
+    action_df['hour'] = (action_df['installTime'] / 100 % 100).astype(int)
+    user_df = pd.read_hdf(path_intermediate_dataset + hdf_user)
+
+    action_df = action_df.merge(user_df, how='left', on='userID')
+    del user_df
+    gc.collect()
+
+    action_df['count'] = 1
+    for c in (set(columns_set_to_construct_hour_prob) & set(action_df.columns)):
+        hdf_out = 'f_' + c + '_hour_install_prob.h5'
+        new_c = c + '_hour'
+        fn_feature = c + '_hour_install_prob'
+        # 开始计时，并打印相关信息
+        start = util.print_start(hdf_out)
+        c_hour_count = action_df[[c, 'hour', 'count']].groupby([c, 'hour'], as_index=False).count()
+        c_count = action_df[[c, 'count']].groupby(c, as_index=False).count()
+        c_count.rename(columns={'count': 'sum'}, inplace=True)
+
+        c_hour_count = c_hour_count.merge(c_count, how='left', on=c)
+        del c_count
+        gc.collect()
+        c_hour_count[fn_feature] = c_hour_count['count'] / c_hour_count['sum']
+        # 归一化
+        c_hour_count[fn_feature] = util.min_max_scaling(c_hour_count[fn_feature])
+
+        # c_hour
+        c_hour_count[new_c] = util.elegant_pairing(c_hour_count[c], c_hour_count['hour'])
+        del c_hour_count[c]
+        del c_hour_count['hour']
+        del c_hour_count['count']
+        del c_hour_count['sum']
+
+        # 存储
+        util.safe_save(path_feature, hdf_out, c_hour_count[[new_c, fn_feature]])
+
+        # 停止计时，并打印相关信息
+        util.print_stop(start)
 
 
 def fg_dataset(hdf_out, hdf_in):
@@ -769,9 +917,19 @@ def fg_dataset(hdf_out, hdf_in):
         if not flag2:
             print('{0} is not exist.'.format(col2))
         # 添加特征
-        dataset_df = util.add_feature(dataset_df, hdf_feature, f_conversion_count)
+        dataset_df = util.add_feature(dataset_df, hdf_feature, f_conversion_count_combi())
         # 删除二次组合特征本身
         del dataset_df[c]
+        # 填充缺失值
+        dataset_df[fn_feature].fillna(0, inplace=True)
+
+    # 为每个有效特征添加对应的 _hour_prob 特征
+    for c in (dataset_df.columns & columns_set_to_construct_hour_prob):
+        hdf_feature = 'f_' + c + '_hour_install_prob.h5'
+        fn_feature = c + '_hour_install_prob'
+        # 添加特征
+        dataset_df[c + '_hour'] = util.elegant_pairing(dataset_df[c], dataset_df['hour'])
+        dataset_df = util.add_feature(dataset_df, hdf_feature, f_user_hour_install_prob)
         # 填充缺失值
         dataset_df[fn_feature].fillna(0, inplace=True)
 
@@ -812,19 +970,25 @@ def fg_dataset(hdf_out, hdf_in):
     # indexer = dataset_df[fn_connectionType_telecomsOperator].isin(columns_set_inapparent_con_tele)
     # dataset_df.loc[indexer, fn_connectionType_telecomsOperator] = 5
 
-    # fn_residence_cat
-    dataset_df = util.add_feature(dataset_df, hdf_residence_cat, reclassify_residence)
-    # 将缺失值填充为 3, 因为这是一个无关紧要的类
-    dataset_df[fn_residence_cat].fillna(4, inplace=True)
+    # # fn_residence_cat
+    # dataset_df = util.add_feature(dataset_df, hdf_residence_cat, reclassify_residence)
+    # # 将缺失值填充为 3, 因为这是一个无关紧要的类
+    # dataset_df[fn_residence_cat].fillna(4, inplace=True)
 
     # 添加“该 userID_appID 是否已存在安装行为”的特征
     util.print_constructing_feature(fn_is_installed)
-    # 从 action 数据构造
+    # 从 action, train, valid 数据构造
     if 'test' in hdf_in:
-        dataset_df = f_is_installed_from_action_testset_ol(dataset_df)
-        dataset_df = f_is_installed_from_trainset_testset_ol(dataset_df)
-    else:
-        dataset_df = f_is_installed_from_action_trainset(dataset_df)
+        dataset_df = f_is_installed_from_action_for_test_ol(dataset_df)
+        dataset_df = f_is_installed_from_trainset_for_test_ol(dataset_df)
+        dataset_df = f_is_installed_from_validset_test_ol(dataset_df)
+    elif 'valid' in hdf_in:
+        dataset_df = f_is_installed_from_action_for_train_and_valid(dataset_df)
+        dataset_df = f_is_installed_from_trainset_for_valid(dataset_df)
+        dataset_df = f_is_installed_from_self(dataset_df)
+    elif 'train' in hdf_in:
+        dataset_df = f_is_installed_from_action_for_train_and_valid(dataset_df)
+        dataset_df = f_is_installed_from_self(dataset_df)
     # 从 user_app 数据构造
     if 'userID_appID' not in dataset_df.columns:
         dataset_df['userID_appID'] = util.elegant_pairing(dataset_df['userID'], dataset_df['appID'])
@@ -946,6 +1110,7 @@ def construct_feature():
     f_conversion_ratio()
     f_conversion_count()
     f_conversion_count_combi()
+    f_user_hour_install_prob()
     fg_trainset()
     fg_validset()
     fg_testset_ol()

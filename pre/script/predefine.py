@@ -59,6 +59,8 @@ hdf_conversion_ratio_telecomsOperator = 'f_conversion_ratio_telecomsOperator.h5'
 hdf_hour = 'f_hour.h5'
 hdf_week = 'f_week.h5'
 
+hdf_age_hour_install_prob = 'f_age_hour_install_prob.h5'
+
 hdf_userID = 'f_userID.h5'
 
 # 分析结果
@@ -142,7 +144,8 @@ numeric_features_set = {
     'conversion_ratio_appPlatform',
     'conversion_ratio_camgaignID',
     'conversion_ratio_advertiserID',
-    'conversion_ratio_adID'
+    'conversion_ratio_adID',
+    # 'hometown_hour_install_prob'
 }
 # 那些无法提取 count_ratio 的 columns
 columns_set_without_count_ratio = {
@@ -219,7 +222,7 @@ columns_set_to_construct_conversion_ratio = {
     # 'week'
 }
 # 那些可以构造 conversion_count 特征的列
-columns_set_to_construct_conversion_count = {
+columns_set_to_construct_conversion_count = set({
     # 'label',
     # 'clickTime',
     # 'conversionTime',
@@ -245,7 +248,7 @@ columns_set_to_construct_conversion_count = {
     # 'appCategory'
     # 'hour',
     # 'week'
-}
+})
 # 那些可以构造 conversion_count 特征的二次组合特征
 columns_set_to_construct_conversion_count_combi = {
     # 'hometown_advertiserID',
@@ -253,10 +256,11 @@ columns_set_to_construct_conversion_count_combi = {
     # 'positionID_marriageStatus'
     # 'creativeID_residence'
     # 'creativeID_age'
+    # 'creativeID_connectionType'
 }
 # 已被重新分类
 columns_set_reclassified = {
-    'residence',
+    # 'residence',
     'age'
 }
 # 组合特征集合
@@ -270,12 +274,25 @@ combi_feature = [
     ['appCategory', 'week'],
     ['appCategory', 'connectionType'],
     # ['appCategory', 'sitesetID'],  # 无提升
-    ['appCategory', 'age'],
     ['appCategory', 'gender'],
+    ['appCategory', 'haveBaby'],
+    # ['appCategory', 'hour'], # 无明显效果
+    ['appCategory', 'age'],
     ['appCategory', 'education'],
-    ['appCategory', 'marriageStatus'],
-    ['appCategory', 'haveBaby']
+    ['appCategory', 'marriageStatus']
+    # ['appID', 'hour'] # 无明显效果
+    # ['age', 'hour'] # 无明显效果
 ]
+
+columns_set_to_construct_hour_prob = {
+    # 'age',
+    # 'gender'
+    # 'education',
+    # 'marriageStatus',
+    # 'haveBaby',
+    # 'hometown',
+    # 'residence'
+}
 
 # 特征群文件
 hdf_context_dataset_fg = 'fg_context_dataset.h5'

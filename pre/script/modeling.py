@@ -516,11 +516,12 @@ def tuning_hyper_parameters_lr_sim(n_iter_max=10):
 
 def gen_alphas(alpha):
     l = alpha / 10
-    alphas = [2*l, 4*l, 6*l, 8*l, alpha, 2*alpha, 4*alpha, 6*alpha, 8*alpha]
+    alphas = np.array([2*l, 4*l, 6*l, 8*l, alpha, 2*alpha, 4*alpha, 6*alpha, 8*alpha])
+    alphas = np.round(alphas, 6)
     return alphas
 
 
-def tuning_hyper_parameters_lr_sim_tmp(n_iter_max=10):
+def tuning_hyper_parameters_lr_sim_tmp(n_iter_max=10, fast=True):
     # 开始计时，并打印相关信息
     start = time()
     print('\nTuning hyper parameters of lr_sim...')
@@ -532,52 +533,13 @@ def tuning_hyper_parameters_lr_sim_tmp(n_iter_max=10):
     from sklearn.linear_model import SGDClassifier
     from sklearn.metrics import log_loss
 
-    # alphas = np.logspace(-6, -2, 5)
-    alphas = [0.000001, 0.00001, 0.0001, 0.001, 0.01]
-    alpha_best = 0.0001
-    n_iter_initial = 6
-    log_loss_train_best = 1
-    log_loss_valid_best = 1
-    print('\nTuning alpha in {0}.'.format(alphas))
-    print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
-    for alpha in alphas:
-        clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter_initial, n_jobs=-1, random_state=42)
-        clf.fit(X_train, y_train)
-
-        # 打印在训练集，测试集上的 logloss
-        log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
-        log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
-        print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha, n_iter_initial, log_loss_train, log_loss_valid))
-
-        if log_loss_valid < log_loss_valid_best:
-            log_loss_valid_best = log_loss_valid
-            alpha_best = alpha
-
-    alpha_best_prev = alpha_best
-    alphas = gen_alphas(alpha_best)
-    print('\nTuning alpha in {0}.'.format(alphas))
-    print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
-    for alpha in alphas:
-        clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter_initial, n_jobs=-1, random_state=42)
-        clf.fit(X_train, y_train)
-
-        # 打印在训练集，测试集上的 logloss
-        log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
-        log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
-        print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha, n_iter_initial, log_loss_train, log_loss_valid))
-
-        if log_loss_valid < log_loss_valid_best:
-            log_loss_valid_best = log_loss_valid
-            alpha_best = alpha
-
-    if alpha_best != alpha_best_prev:
-        if alpha_best < alpha_best_prev:
-            num = alpha_best_prev / 10
-            alphas = [alpha_best - num, alpha_best, alpha_best + num]
-        elif alpha_best > alpha_best_prev:
-            num = alpha_best_prev
-            alphas = [alpha_best - num, alpha_best, alpha_best + num]
-
+    if not fast:
+        # alphas = np.logspace(-6, -2, 5)
+        alphas = [0.000001, 0.00001, 0.0001, 0.001, 0.01]
+        alpha_best = 0.0001
+        n_iter_initial = 6
+        log_loss_train_best = 1
+        log_loss_valid_best = 1
         print('\nTuning alpha in {0}.'.format(alphas))
         print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
         for alpha in alphas:
@@ -593,33 +555,82 @@ def tuning_hyper_parameters_lr_sim_tmp(n_iter_max=10):
                 log_loss_valid_best = log_loss_valid
                 alpha_best = alpha
 
-    n_iter = 2
-    n_iter_best = 5
-    print('\nTuning n_iter.')
-    print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
-    while n_iter <= n_iter_max:
-        clf = SGDClassifier(loss='log', alpha=alpha_best, n_iter=n_iter, n_jobs=-1, random_state=42)
-        clf.fit(X_train, y_train)
+        # alpha_best_prev = alpha_best
+        # alphas = gen_alphas(alpha_best)
+        # np.set_printoptions(precision=0)
+        # print('\nTuning alpha in {0}.'.format(alphas))
+        # print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
+        # for alpha in alphas:
+        #     clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter_initial, n_jobs=-1, random_state=42)
+        #     clf.fit(X_train, y_train)
+        #
+        #     # 打印在训练集，测试集上的 logloss
+        #     log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
+        #     log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
+        #     print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha, n_iter_initial, log_loss_train, log_loss_valid))
+        #
+        #     if log_loss_valid < log_loss_valid_best:
+        #         log_loss_valid_best = log_loss_valid
+        #         alpha_best = alpha
+        #
+        # if alpha_best != alpha_best_prev:
+        #     if alpha_best < alpha_best_prev:
+        #         num = alpha_best_prev / 10
+        #         alphas = [alpha_best - num, alpha_best, alpha_best + num]
+        #     elif alpha_best > alpha_best_prev:
+        #         num = alpha_best_prev
+        #         alphas = [alpha_best - num, alpha_best, alpha_best + num]
+        #     alphas = np.round(alphas, 6)
+        #     print('\nTuning alpha in {0}.'.format(alphas))
+        #     print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
+        #     for alpha in alphas:
+        #         clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter_initial, n_jobs=-1, random_state=42)
+        #         clf.fit(X_train, y_train)
+        #
+        #         # 打印在训练集，测试集上的 logloss
+        #         log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
+        #         log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
+        #         print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha, n_iter_initial, log_loss_train, log_loss_valid))
+        #
+        #         if log_loss_valid < log_loss_valid_best:
+        #             log_loss_valid_best = log_loss_valid
+        #             alpha_best = alpha
 
-        # 打印在训练集，测试集上的 logloss
-        log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
-        log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
-        print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha_best, n_iter, log_loss_train, log_loss_valid))
+        n_iter = 2
+        n_iter_best = 5
+        print('\nTuning n_iter.')
+        print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
+        while n_iter <= n_iter_max:
+            clf = SGDClassifier(loss='log', alpha=alpha_best, n_iter=n_iter, n_jobs=-1, random_state=42)
+            clf.fit(X_train, y_train)
 
-        if log_loss_valid <= log_loss_valid_best:
-            log_loss_train_best = log_loss_train
-            log_loss_valid_best = log_loss_valid
-            n_iter_best = n_iter
-        elif log_loss_valid - log_loss_valid_best > 0.01:
-            break
-        n_iter += 2
+            # 打印在训练集，测试集上的 logloss
+            log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
+            log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
+            print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha_best, n_iter, log_loss_train, log_loss_valid))
 
-    print('\nbest model:')
-    print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
-    print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha_best, n_iter_best, log_loss_train_best, log_loss_valid_best))
-    print('Refitting model with the best parameters...')
-    clf_best = SGDClassifier(loss='log', alpha=alpha_best, n_iter=n_iter_best, n_jobs=-1, random_state=42)
-    clf_best.fit(X_train, y_train)
+            if log_loss_valid <= log_loss_valid_best:
+                log_loss_train_best = log_loss_train
+                log_loss_valid_best = log_loss_valid
+                n_iter_best = n_iter
+            elif log_loss_valid - log_loss_valid_best > 0.01:
+                break
+            n_iter += 2
+
+        print('\nbest model:')
+        print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
+        print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha_best, n_iter_best, log_loss_train_best, log_loss_valid_best))
+        print('Refitting model with the best parameters...')
+        clf_best = SGDClassifier(loss='log', alpha=alpha_best, n_iter=n_iter_best, n_jobs=-1, random_state=42)
+        clf_best.fit(X_train, y_train)
+    else:
+        print('In fast mode.')
+        clf_best = SGDClassifier(loss='log', alpha=0.00001, n_iter=6, n_jobs=-1, random_state=42)
+        clf_best.fit(X_train, y_train)
+        print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
+        log_loss_train = log_loss(y_train, clf_best.predict_proba(X_train))
+        log_loss_valid = log_loss(y_valid, clf_best.predict_proba(X_valid))
+        print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(0.00001, 6, log_loss_train, log_loss_valid))
 
     # 手动释放内存
     del X_train
@@ -690,43 +701,44 @@ def tuning_hyper_parameters_lr_sim_avg(train_proportion=0.8):
     util.print_stop(start)
 
 
-def tuning_hyper_parameters_xgb_sim(train_proportion=0.8):
+def tuning_hyper_parameters_xgb_sim():
     # 开始计时，并打印相关信息
     start = time()
     print('\nStart tuning hyper parameters of xgb_sim...')
 
-    # 加载训练集
-    trainset_df = pd.read_hdf(path_feature + 'fg_trainset.h5')
+    # 加载数据集
+    trainset_df = pd.read_hdf(path_feature + hdf_trainset_fg)
+    validset_df = pd.read_hdf(path_feature + hdf_validset_fg)
 
-    # 划分训练集和线下测试集
-    train_size = int(trainset_df.index.size * train_proportion)
-    test_size = int(trainset_df.index.size * (train_proportion + 0.1))
-    boolean_indexer_column = trainset_df.columns == 'label'
+    y_train = trainset_df['label'].values.ravel()
+    y_valid = validset_df['label'].values.ravel()
 
-    y_train = trainset_df.loc[:train_size, boolean_indexer_column].values.ravel()
-    y_test = trainset_df.loc[train_size:test_size, boolean_indexer_column].values.ravel()
+    del trainset_df['label']
+    del validset_df['label']
 
-    X_train = trainset_df.loc[:train_size, ~boolean_indexer_column].values
-    X_test = trainset_df.loc[train_size:test_size, ~boolean_indexer_column].values
+    X_train = trainset_df.values
+    X_valid = validset_df.values
 
     del trainset_df
+    del validset_df
     gc.collect()
 
     # 训练模型
     from xgboost import XGBClassifier
-    clf = XGBClassifier(n_estimators=300, reg_alpha=0.001, subsample=0.8, colsample_bytree=0.8)
-    clf.fit(X_train, y_train)
+    for i in range(40, 100, 10):
+        clf = XGBClassifier(n_estimators=i)
+        clf.fit(X_train, y_train)
 
-    # 打印在训练集上的 logloss
-    from sklearn.metrics import log_loss
-    print('logloss in trainset: ', log_loss(y_train, clf.predict_proba(X_train)))
-    print('logloss in testset: ', log_loss(y_test, clf.predict_proba(X_test)))
+        # 打印在训练集上的 logloss
+        from sklearn.metrics import log_loss
+        print('logloss in trainset: ', log_loss(y_train, clf.predict_proba(X_train)))
+        print('logloss in validset: ', log_loss(y_valid, clf.predict_proba(X_valid)))
 
     # 手动释放内存
     del X_train
     del y_train
-    del X_test
-    del y_test
+    del X_valid
+    del y_valid
     gc.collect()
 
     # 存储模型
