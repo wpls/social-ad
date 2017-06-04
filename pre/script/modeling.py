@@ -21,60 +21,141 @@ from predefine import *
 def one_hot():
     # 开始计时，并打印相关信息
     start = time()
-    print('\nStart one hot')
+    print('\nOne-hot encoding...')
 
     # ===== train =====
+    print('Loading {0}...'.format(hdf_trainset_fg))
     trainset_df = pd.read_hdf(path_feature + hdf_trainset_fg)
+    # 打印数值特征集合
+    total_columns_set = set(trainset_df.columns.tolist())
+    print('numeric_features: ')
+    for c in (numeric_features_set & total_columns_set):
+        print('    ' + c)
+    print('boolean_features: ')
+    for c in (boolean_features_set & total_columns_set):
+        print('    ' + c)
 
     # y_train
+    print('Getting y_train...')
     y_train = trainset_df['label']
     del trainset_df['label']
+    print('Saving y_train... ')
     util.safe_save(path_modeling_dataset, npy_y_train, y_train)
 
     # 区分出类别特征
-    numeric_features_s = pd.read_hdf(path_intermediate_dataset + hdf_numeric_features_set)
-    numeric_features_set = set(numeric_features_s)
     categorical_features = \
-        ~trainset_df.columns.isin(numeric_features_set | numeric_features_static_set | boolean_features_set)
-    print('numeric_features: ')
-    for c in numeric_features_set | numeric_features_static_set:
-        print(c)
-    print('\n')
+        ~trainset_df.columns.isin(numeric_features_set | boolean_features_set)
 
     # X_train
     from sklearn.preprocessing import OneHotEncoder
     enc = OneHotEncoder(categorical_features=categorical_features)
     # enc = OneHotEncoder()
+    print('Encoding X_train... ')
     X_train = enc.fit_transform(trainset_df.values)
     del trainset_df
     gc.collect()
+    print('Saving X_train... ')
     util.safe_save(path_modeling_dataset, npz_X_train, X_train)
 
     # ===== valid =====
+    print('Loading {0}...'.format(hdf_validset_fg))
     validset_df = pd.read_hdf(path_feature + hdf_validset_fg)
 
     # y_valid
+    print('Getting y_valid...')
     y_valid = validset_df['label']
     del validset_df['label']
+    print('Saving y_valid... ')
     util.safe_save(path_modeling_dataset, npy_y_valid, y_valid)
 
     # X_valid
+    print('Encoding X_valid... ')
     X_valid = enc.transform(validset_df.values)
     del validset_df
     gc.collect()
+    print('Saving X_valid... ')
     util.safe_save(path_modeling_dataset, npz_X_valid, X_valid)
 
     # ===== test_ol =====
+    print('Loading {0}...'.format(hdf_testset_ol_fg))
     testset_ol_df = pd.read_hdf(path_feature + hdf_testset_ol_fg)
 
     # X_test_ol
+    print('Encoding X_test_ol... ')
     X_test_ol = enc.transform(testset_ol_df.values)
     del testset_ol_df
     gc.collect()
+    print('Saving X_test_ol... ')
     util.safe_save(path_modeling_dataset, npz_X_test_ol, X_test_ol)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
+
+
+def one_hot_tmp():
+    # 开始计时，并打印相关信息
+    start = time()
+    print('\nOne-hot encoding...')
+
+    # ===== train =====
+    print('Loading {0}...'.format(hdf_trainset_fg))
+    trainset_df = pd.read_hdf(path_feature + hdf_trainset_fg)
+    # 打印数值特征集合
+    total_columns_set = set(trainset_df.columns.tolist())
+    print('numeric_features: ')
+    for c in (numeric_features_set & total_columns_set):
+        print('    ' + c)
+    print('boolean_features: ')
+    for c in (boolean_features_set & total_columns_set):
+        print('    ' + c)
+
+    # y_train
+    print('Getting y_train...')
+    y_train = trainset_df['label']
+    del trainset_df['label']
+
+    # 区分出类别特征
+    categorical_features = \
+        ~trainset_df.columns.isin(numeric_features_set | boolean_features_set)
+
+    # X_train
+    from sklearn.preprocessing import OneHotEncoder
+    enc = OneHotEncoder(categorical_features=categorical_features)
+    # enc = OneHotEncoder()
+    print('Encoding X_train... ')
+    X_train = enc.fit_transform(trainset_df.values).tocsr()
+    del trainset_df
+    gc.collect()
+
+    # ===== valid =====
+    print('Loading {0}...'.format(hdf_validset_fg))
+    validset_df = pd.read_hdf(path_feature + hdf_validset_fg)
+
+    # y_valid
+    print('Getting y_valid...')
+    y_valid = validset_df['label']
+    del validset_df['label']
+
+    # X_valid
+    print('Encoding X_valid... ')
+    X_valid = enc.transform(validset_df.values).tocsr()
+    del validset_df
+    gc.collect()
+
+    # ===== test_ol =====
+    print('Loading {0}...'.format(hdf_testset_ol_fg))
+    testset_ol_df = pd.read_hdf(path_feature + hdf_testset_ol_fg)
+
+    # X_test_ol
+    print('Encoding X_test_ol... ')
+    X_test_ol = enc.transform(testset_ol_df.values).tocsr()
+    del testset_ol_df
+    gc.collect()
+
+    # 停止计时，并打印相关信息
+    util.print_stop(start)
+
+    return X_train, y_train, X_valid, y_valid, X_test_ol
 
 
 def split_train_test(train_proportion=0.8):
@@ -280,13 +361,17 @@ def tuning_hyper_parameters_xgb(train_proportion=0.1):
 def tuning_hyper_parameters_lr_sim(n_iter_max=10):
     # 开始计时，并打印相关信息
     start = time()
-    print('\nStart tuning hyper parameters of lr_sim')
+    print('\nTuning hyper parameters of lr_sim...')
 
     # 加载
+    print('Loading X_train...')
     X_train = load_npz(path_modeling_dataset + npz_X_train).tocsr()
+    print('Loading X_valid...')
     X_valid = load_npz(path_modeling_dataset + npz_X_valid).tocsr()
 
+    print('Loading y_train...')
     y_train = np.load(path_modeling_dataset + npy_y_train)
+    print('Loading y_valid...')
     y_valid = np.load(path_modeling_dataset + npy_y_valid)
 
     # 训练模型
@@ -296,44 +381,49 @@ def tuning_hyper_parameters_lr_sim(n_iter_max=10):
     # alphas = np.logspace(-6, -2, 5)
     alphas = [0.000001, 0.000005, 0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005]
     alpha_best = 0.0001
+    n_iter_initial = 6
+    log_loss_train_best = 1
     log_loss_valid_best = 1
+    print('\nTuning alpha.')
+    print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
     for alpha in alphas:
-        clf = SGDClassifier(loss='log', alpha=alpha, n_iter=6, n_jobs=-1, random_state=42)
+        clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter_initial, n_jobs=-1, random_state=42)
         clf.fit(X_train, y_train)
 
         # 打印在训练集，测试集上的 logloss
         log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
         log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
-        print('alpha: {0}'.format(alpha))
-        print('logloss in trainset: {0:0.6f}, logloss in validset: {1:0.6f}'.format(
-            log_loss_train, log_loss_valid))
+        print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha, n_iter_initial, log_loss_train, log_loss_valid))
 
         if log_loss_valid < log_loss_valid_best:
             log_loss_valid_best = log_loss_valid
             alpha_best = alpha
 
-    n_iter = 1
+    n_iter = 2
     n_iter_best = 5
-    while n_iter < n_iter_max:
+    print('\nTuning n_iter.')
+    print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
+    while n_iter <= n_iter_max:
         clf = SGDClassifier(loss='log', alpha=alpha_best, n_iter=n_iter, n_jobs=-1, random_state=42)
         clf.fit(X_train, y_train)
 
         # 打印在训练集，测试集上的 logloss
         log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
         log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
-        print('alpha: {0}, n_iter: {1}'.format(alpha_best, n_iter))
-        print('logloss in trainset: {0:0.6f}, logloss in validset: {1:0.6f}'.format(
-            log_loss_train, log_loss_valid))
+        print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha_best, n_iter, log_loss_train, log_loss_valid))
 
         if log_loss_valid <= log_loss_valid_best:
+            log_loss_train_best = log_loss_train
             log_loss_valid_best = log_loss_valid
             n_iter_best = n_iter
         elif log_loss_valid - log_loss_valid_best > 0.01:
             break
-        n_iter += 1
+        n_iter += 2
 
-    print('\nbest alpha: {0}, best n_iter: {1}, best log_loss_valid: {2:0.6f}'.format(
-        alpha_best, n_iter_best, log_loss_valid_best))
+    print('\nbest model:')
+    print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
+    print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha_best, n_iter_best, log_loss_train_best, log_loss_valid_best))
+    print('Refitting model with the best parameters...')
     clf_best = SGDClassifier(loss='log', alpha=alpha_best, n_iter=n_iter_best, n_jobs=-1, random_state=42)
     clf_best.fit(X_train, y_train)
 
@@ -345,7 +435,83 @@ def tuning_hyper_parameters_lr_sim(n_iter_max=10):
     gc.collect()
 
     # 存储模型
+    print('Saving model...')
     util.safe_save(path_model, 'sgd_lr.pkl', clf_best)
+
+    # 停止计时，并打印相关信息
+    util.print_stop(start)
+
+
+def tuning_hyper_parameters_lr_sim_tmp(n_iter_max=10):
+    # 开始计时，并打印相关信息
+    start = time()
+    print('\nTuning hyper parameters of lr_sim...')
+
+    # 加载
+    X_train, y_train, X_valid, y_valid, X_test_ol = one_hot_tmp()
+
+    # 训练模型
+    from sklearn.linear_model import SGDClassifier
+    from sklearn.metrics import log_loss
+
+    # alphas = np.logspace(-6, -2, 5)
+    alphas = [0.000001, 0.000005, 0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005]
+    alpha_best = 0.0001
+    n_iter_initial = 6
+    log_loss_train_best = 1
+    log_loss_valid_best = 1
+    print('\nTuning alpha.')
+    print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
+    for alpha in alphas:
+        clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter_initial, n_jobs=-1, random_state=42)
+        clf.fit(X_train, y_train)
+
+        # 打印在训练集，测试集上的 logloss
+        log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
+        log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
+        print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha, n_iter_initial, log_loss_train, log_loss_valid))
+
+        if log_loss_valid < log_loss_valid_best:
+            log_loss_valid_best = log_loss_valid
+            alpha_best = alpha
+
+    n_iter = 2
+    n_iter_best = 5
+    print('\nTuning n_iter.')
+    print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
+    while n_iter <= n_iter_max:
+        clf = SGDClassifier(loss='log', alpha=alpha_best, n_iter=n_iter, n_jobs=-1, random_state=42)
+        clf.fit(X_train, y_train)
+
+        # 打印在训练集，测试集上的 logloss
+        log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
+        log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
+        print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha_best, n_iter, log_loss_train, log_loss_valid))
+
+        if log_loss_valid <= log_loss_valid_best:
+            log_loss_train_best = log_loss_train
+            log_loss_valid_best = log_loss_valid
+            n_iter_best = n_iter
+        elif log_loss_valid - log_loss_valid_best > 0.01:
+            break
+        n_iter += 2
+
+    print('\nbest model:')
+    print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
+    print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha_best, n_iter_best, log_loss_train_best, log_loss_valid_best))
+    print('Refitting model with the best parameters...')
+    clf_best = SGDClassifier(loss='log', alpha=alpha_best, n_iter=n_iter_best, n_jobs=-1, random_state=42)
+    clf_best.fit(X_train, y_train)
+
+    # 手动释放内存
+    del X_train
+    del y_train
+    del X_valid
+    del y_valid
+    gc.collect()
+
+    # 预测
+    predict_test_ol_lr_tmp(clf_best, X_test_ol)
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
@@ -455,7 +621,7 @@ def tuning_hyper_parameters_xgb_sim(train_proportion=0.8):
 def predict_test_ol_lr():
     # 开始计时，并打印相关信息
     start = time()
-    print('\nStart predicting test_ol lr')
+    print('\nPredicting test_ol using lr...')
 
     # 加载 test_ol
     test_ol = pd.read_hdf(path_intermediate_dataset + hdf_test_ol)
@@ -486,12 +652,40 @@ def predict_test_ol_lr():
     # 看一下提交数据集的统计数据
     print('\nstatistics: ')
     print(submission['prob'].describe())
-    print('\n')
 
     # # 对于那些已经有安装行为的 'userID-appID', 应该都预测为0
     # submission.loc[submission['userID-appID'].isin(userID_appID_test), 'prob'] = 0
     # # 删除 userID-appID 列
     # del submission['userID-appID']
+
+    # 生成提交的压缩文件
+    util.safe_save(path_submission_dataset, csv_submission_lr, submission)
+
+    # 停止计时，并打印相关信息
+    util.print_stop(start)
+
+
+def predict_test_ol_lr_tmp(clf, X_test_ol):
+    # 开始计时，并打印相关信息
+    start = time()
+    print('\nPredicting test_ol using lr...')
+
+    # 加载 test_ol
+    test_ol_df = pd.read_hdf(path_intermediate_dataset + hdf_test_ol)
+
+    # 预测
+    y_test_ol = clf.predict_proba(X_test_ol)
+
+    # 生成提交数据集
+    submission = test_ol_df[['instanceID', 'label']].copy()
+    submission.rename(columns={'label': 'prob'}, inplace=True)
+    submission['prob'] = y_test_ol[:, 1]
+    submission.set_index('instanceID', inplace=True)
+    submission.sort_index(inplace=True)
+
+    # 看一下提交数据集的统计数据
+    print('\nstatistics: ')
+    print(submission['prob'].describe())
 
     # 生成提交的压缩文件
     util.safe_save(path_submission_dataset, csv_submission_lr, submission)

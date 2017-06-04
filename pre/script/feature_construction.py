@@ -227,7 +227,7 @@ def reclassify_residence():
     gc.collect()
 
     # 获取新类
-    new_cat_list = util.get_new_cat_list(sample_ratio, range(10, 100, 10))
+    new_cat_list = util.get_new_cat_list(sample_ratio, range(20, 100, 9))
 
     user_df = pd.read_hdf(path_intermediate_dataset + hdf_user)
     residence_cat_df = user_df[column].value_counts().reset_index()
@@ -637,8 +637,6 @@ def f_count_ratio():
     # 加载数据集
     trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
 
-    # 安全的将 hdf_numeric_features_set 清空, 以避免可能的重复添加
-    util.safe_remove(path_intermediate_dataset + hdf_numeric_features_set)
     # 遍历数据集中的有效特征
     for c in trainset_df.columns:
         if c not in (columns_set_without_count_ratio | columns_set_mismatch):
@@ -656,9 +654,6 @@ def f_conversion_ratio():
     # 加载数据集
     trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
 
-    # 安全的将 hdf_numeric_features_set 清空, 以避免可能的重复添加
-    # 注意与其他也使用 hdf_numeric_features_set 的代码的先后顺序！！！
-    util.safe_remove(path_intermediate_dataset + hdf_numeric_features_set)
     # 遍历数据集中的有效特征
     for c in (trainset_df.columns & columns_set_to_construct_conversion_ratio):
         util.f_conversion_ratio(trainset_df, c)
@@ -725,6 +720,7 @@ def fg_dataset(hdf_out, hdf_in):
 
     # 开始计时，并打印相关信息
     start = util.print_start(hdf_out)
+    print('Constructing feature:')
 
     # 加载 hdf_in
     dataset_df = pd.read_hdf(path_intermediate_dataset + hdf_in)
@@ -816,10 +812,10 @@ def fg_dataset(hdf_out, hdf_in):
     # indexer = dataset_df[fn_connectionType_telecomsOperator].isin(columns_set_inapparent_con_tele)
     # dataset_df.loc[indexer, fn_connectionType_telecomsOperator] = 5
 
-    # # fn_residence_cat
-    # dataset_df = util.add_feature(dataset_df, hdf_residence_cat, reclassify_residence)
-    # # 将缺失值填充为 3, 因为这是一个无关紧要的类
-    # dataset_df[fn_residence_cat].fillna(4, inplace=True)
+    # fn_residence_cat
+    dataset_df = util.add_feature(dataset_df, hdf_residence_cat, reclassify_residence)
+    # 将缺失值填充为 3, 因为这是一个无关紧要的类
+    dataset_df[fn_residence_cat].fillna(4, inplace=True)
 
     # 添加“该 userID_appID 是否已存在安装行为”的特征
     util.print_constructing_feature(fn_is_installed)

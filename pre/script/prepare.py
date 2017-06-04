@@ -388,4 +388,4 @@ def prepare_dataset_all():
     validset()
     testset_ol()
 
-    print('\nThe total time spent on preparing dataset: {0:.0f} s'.format(time() - start))
+    print('The total time spent on preparing dataset: {0:.0f} s'.format(time() - start))

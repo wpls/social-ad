@@ -7,6 +7,7 @@ path_modeling_dataset = path_pre + 'modeling-dataset/'
 path_model = path_pre + 'model/'
 path_submission_dataset = path_pre + 'submission-dataset/'
 path_cv_res = path_pre + 'cv-res/'
+path_analysis_res = path_pre + 'analysis_res/'
 
 # 是否舍弃后 5 天的负样本
 discard_negative_last_5_day = False
@@ -59,6 +60,9 @@ hdf_hour = 'f_hour.h5'
 hdf_week = 'f_week.h5'
 
 hdf_userID = 'f_userID.h5'
+
+# 分析结果
+hdf_pos_score_series = 'pos_score_series.h5'
 
 # 特征名字 fn: feature name
 fn_is_not_wifi = 'is_not_wifi'
@@ -120,16 +124,26 @@ dense_feature_name_set = {
     'userID'
 }
 boolean_features_set = {
-    fn_is_installed,
-    fn_is_pref_cat,
-    fn_is_not_wifi,
+    # fn_is_installed,
+    # fn_is_pref_cat,
+    # fn_is_not_wifi,
     fn_is_child_old
 }
-# 不应该手动添加，而应该在构造该特征时自动添加
-numeric_features_static_set = {
-    'confidence'
+# 不应该自动添加，手动添加更加灵活
+numeric_features_set = {
+    'conversion_ratio_positionID',
+    # 'conversion_ratio_residence',
+    # 'conversion_ratio_hometown',
+    'conversion_ratio_positionType',
+    'conversion_ratio_appCategory',
+    'conversion_ratio_appID',
+    'confidence',
+    'conversion_ratio_age',
+    'conversion_ratio_appPlatform',
+    'conversion_ratio_camgaignID',
+    'conversion_ratio_advertiserID',
+    'conversion_ratio_adID'
 }
-hdf_numeric_features_set = 'numeric_features.h5'
 # 那些无法提取 count_ratio 的 columns
 columns_set_without_count_ratio = {
     'label',
@@ -173,7 +187,8 @@ columns_set_inapparent = {
     'telecomsOperator',
     'sitesetID',
     'connectionType',
-    fn_is_not_wifi
+    fn_is_not_wifi,
+    'hometown'
 }
 # 那些可以构造 conversion_ratio 特征的列
 columns_set_to_construct_conversion_ratio = {
@@ -193,12 +208,12 @@ columns_set_to_construct_conversion_ratio = {
     # 'marriageStatus',
     # 'haveBaby',
     'hometown',
-    'residence',
+    # 'residence',
     'adID',
     'camgaignID',
     'advertiserID',
     'appID',
-    'appPlatform',
+    # 'appPlatform',
     'appCategory'
     # 'hour',
     # 'week'
@@ -221,12 +236,12 @@ columns_set_to_construct_conversion_count = {
     # 'marriageStatus',
     # 'haveBaby',
     # 'hometown',
-    # 'residence',
+    # 'residence'
     # 'adID'
     # 'camgaignID'
     # 'advertiserID'
     # 'appID',
-    # 'appPlatform',
+    # 'appPlatform'
     # 'appCategory'
     # 'hour',
     # 'week'
@@ -247,13 +262,19 @@ columns_set_reclassified = {
 # 组合特征集合
 combi_feature = [
     ['appID', fn_is_not_wifi],
-    ['hometown', 'appCategory'],
-    ['age', 'appCategory'],
-    ['gender', 'appCategory'],
-    ['education', 'appCategory'],
-    ['marriageStatus', 'appCategory'],
-    ['haveBaby', 'appCategory'],
-    ['connectionType', 'appCategory'],
+    # ['appCategory', 'positionType'],  # 效果不好
+    ['appCategory', 'hometown'],
+    # ['appCategory', 'residence'],     # 效果不好
+    # ['appCategory', 'telecomsOperator'],# 无明显效果
+    # ['appCategory', 'appPlatform'], # 无明显效果
+    ['appCategory', 'week'],
+    ['appCategory', 'connectionType'],
+    # ['appCategory', 'sitesetID'],  # 无提升
+    ['appCategory', 'age'],
+    ['appCategory', 'gender'],
+    ['appCategory', 'education'],
+    ['appCategory', 'marriageStatus'],
+    ['appCategory', 'haveBaby']
 ]
 
 # 特征群文件

@@ -14,7 +14,7 @@ from predefine import *
 
 def is_exist(file):
     if os.path.exists(file):
-        print('\n' + file + ' 已存在')
+        print(file + ' existed.')
         return True
     return False
 
@@ -63,13 +63,12 @@ def safe_save(path, file_name, obj):
 
 def print_start(file_name):
     start = time()
-    print('\nStart calculating ' + file_name + '...')
+    print('\nCalculating ' + file_name + '...')
     return start
 
 
 def print_stop(start):
-    print('The calculation is complete.')
-    print('time used = {0:.2f} s'.format(time() - start))
+    print('Completed. Time used = {0:.2f} s'.format(time() - start))
 
 
 def elegant_pairing(s1, s2):
@@ -114,22 +113,6 @@ def f_count_ratio(df, column):
     click_count_column = 'click_count_' + column
     conversion_count_column = 'conversion_count_' + column
     conversion_ratio_column = 'conversion_ratio_' + column
-
-    # 区分数值特征与类别特征，方便后面做 one-hot 处理
-    numeric_features = set()
-    file_name = path_intermediate_dataset + hdf_numeric_features_set
-    if os.path.exists(file_name):
-        numeric_features = set(pd.read_hdf(file_name))
-
-    if column in dense_feature_name_set:
-        if column == 'userID':
-            numeric_features |= {conversion_count_column, conversion_ratio_column}
-        else:
-            numeric_features |= {click_count_column, conversion_count_column, conversion_ratio_column}
-    else:
-        numeric_features |= {conversion_count_column, conversion_ratio_column}
-
-    safe_save(path_intermediate_dataset, hdf_numeric_features_set, Series(list(numeric_features)))
 
     # if is_exist(out_file):
     #     return
@@ -194,17 +177,6 @@ def f_conversion_ratio(df, column):
     click_count_column = 'click_count_' + column
     conversion_count_column = 'conversion_count_' + column
     conversion_ratio_column = 'conversion_ratio_' + column
-
-    # 区分数值特征与类别特征，方便后面做 one-hot 处理
-    numeric_features = set()
-    file_name = path_intermediate_dataset + hdf_numeric_features_set
-    if os.path.exists(file_name):  # 这个判断条件很重要，别删
-        numeric_features = set(pd.read_hdf(file_name))
-
-    # 这里与`f_count_ratio`不同
-    numeric_features |= {conversion_ratio_column}
-
-    safe_save(path_intermediate_dataset, hdf_numeric_features_set, Series(list(numeric_features)))
 
     # if is_exist(out_file):
     #     return
@@ -285,7 +257,7 @@ def exist_null(df):
     :return: 
     """
 
-    print('Start checking...')
+    print('\nChecking missing value...')
     res = False
     for c in df.columns:
         size = df.loc[df[c].isnull()].index.size
@@ -314,15 +286,6 @@ def check_match():
     columns_set_testset_ol = set(testset_ol_df.columns)
     if columns_set_trainset != columns_set_testset_ol:
         return False
-
-    numeric_features_set = set()
-    file_name = path_intermediate_dataset + hdf_numeric_features_set
-    if os.path.exists(file_name):
-        numeric_features_set = set(pd.read_hdf(file_name))
-    else:
-        print('{0} 不存在。'.format(file_name))
-        return False
-
     flag = True
     # 检查每一列的取值是否匹配
     for c in (columns_set_trainset - numeric_features_set):
@@ -346,14 +309,6 @@ def print_value_count(df, name):
     # 开始计时，并打印相关信息
     start = time()
     print('\n开始检查 {0} 中类别特征取值个数……'.format(name))
-
-    numeric_features_set = set()
-    file_name = path_intermediate_dataset + hdf_numeric_features_set
-    if os.path.exists(file_name):
-        numeric_features_set = set(pd.read_hdf(file_name))
-    else:
-        print('{0} 不存在。'.format(file_name))
-        return False
 
     d = {}
     for column in (set(df.columns) - numeric_features_set):
@@ -431,7 +386,7 @@ def print_constructing_feature(fn_feature):
     打印正在构造的特征的信息。
     :return:
     """
-    print('[Constructing feature]: {0}...'.format(fn_feature))
+    print('    {0}...'.format(fn_feature))
 
 
 def print_all_column_sample_ratio(df):
@@ -526,13 +481,17 @@ def get_new_cat_list(sample_ratio, rg):
     :param rg:
     :return:
     """
-    end = 0
-    new_cat_list = [set(sample_ratio.loc[sample_ratio.isnull()].index)]
+    new_cats_list = [set(sample_ratio.loc[sample_ratio.isnull()].index)]
+    value_set_0_begin = set(sample_ratio.loc[(sample_ratio >= 0) & (sample_ratio <= rg[0])].index)
+    value_set_end_infinity = set(sample_ratio.loc[sample_ratio > rg[-1] + 10].index)
+    for value in value_set_0_begin:
+        new_cats_list.append({value})
     for begin in rg:
         end = begin + 9
-        new_cat_list.append(set(sample_ratio.loc[(sample_ratio >= begin) & (sample_ratio <= end)].index))
-    new_cat_list.append(set(sample_ratio.loc[sample_ratio > end].index))
-    return new_cat_list
+        new_cats_list.append(set(sample_ratio.loc[(sample_ratio >= begin) & (sample_ratio <= end)].index))
+    for value in value_set_end_infinity:
+        new_cats_list.append({value})
+    return new_cats_list
 
 
 def assign_new_cat(df, column, new_cat_list):
@@ -563,3 +522,87 @@ def add_combi_feature(df):
         print_constructing_feature(f)
         df[f] = elegant_pairing(df[f1], df[f2])
     return df
+
+
+def f_count_ratio_for_scoring(df, column):
+    neg_count_column = 'neg_count_' + column
+    pos_count_column = 'pos_count_' + column
+    sample_ratio_column = 'sample_ratio_' + column
+
+    count = DataFrame(df.loc[df['label'] == 0, column].value_counts())
+    count.reset_index(inplace=True)
+    count.columns = [column, neg_count_column]
+
+    pos_count = DataFrame(df.loc[df['label'] == 1, column].value_counts())
+    pos_count.reset_index(inplace=True)
+    pos_count.columns = [column, pos_count_column]
+
+    count_ratio = count.merge(pos_count, how='left', on=column)
+    count_ratio[pos_count_column].fillna(0, inplace=True)
+
+    del count
+    del pos_count
+    gc.collect()
+
+    count_ratio[sample_ratio_column] = count_ratio[neg_count_column] / count_ratio[pos_count_column]
+
+    return count_ratio
+
+
+def get_feature_pos_score(df, c):
+    """
+    获得特征辨认正样本的评分。
+    :param df:
+    :param c:
+    :return:
+    """
+    pos_count_column = 'pos_count_' + c
+    sample_ratio_column = 'sample_ratio_' + c
+
+    count_ratio = f_count_ratio_for_scoring(df, c)
+    count_ratio.sort_values(by=[sample_ratio_column])
+    score = count_ratio.loc[count_ratio[sample_ratio_column] < 10, pos_count_column].sum()
+    del count_ratio
+    gc.collect()
+    return score
+
+
+def get_feature_pos_score_series(df, columns_no_traverse):
+    """
+    获得一系列特征辨认正样本的评分。
+    :param df:
+    :param columns_no_traverse:
+    :return:
+    """
+    score_dict = {}
+    for c in df.columns:
+        if c in columns_no_traverse:
+            continue
+        score = get_feature_pos_score(df, c)
+        score_dict[c] = score
+    score_series = Series(score_dict)
+    score_series.sort_values(ascending=False, inplace=True)
+    return score_series
+
+
+def analyze_trainset_feature():
+    """
+    分析trainset中的特征。
+    :return:
+    """
+
+    trainset_fg_df = pd.read_hdf(path_feature + hdf_trainset_fg)
+
+    columns_no_traverse = {
+        'label',
+        'clickTime',
+        'conversionTime',
+        'instanceID',
+        'userID'
+    }
+    pos_score_series = get_feature_pos_score_series(trainset_fg_df, columns_no_traverse)
+    print(pos_score_series)
+
+    # 存储
+    safe_save(path_analysis_res, hdf_pos_score_series, pos_score_series)
+    print('Has been stored to {0}.'.format(path_analysis_res + hdf_pos_score_series))
