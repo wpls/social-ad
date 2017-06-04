@@ -92,6 +92,72 @@ def one_hot():
     util.print_stop(start)
 
 
+# def one_hot_tmp():
+#     # 开始计时，并打印相关信息
+#     start = time()
+#     print('\nOne-hot encoding...')
+#
+#     # ===== train =====
+#     print('Loading {0}...'.format(hdf_trainset_fg))
+#     trainset_df = pd.read_hdf(path_feature + hdf_trainset_fg)
+#     # 打印数值特征集合
+#     total_columns_set = set(trainset_df.columns.tolist())
+#     print('numeric_features: ')
+#     for c in (numeric_features_set & total_columns_set):
+#         print('    ' + c)
+#     print('boolean_features: ')
+#     for c in (boolean_features_set & total_columns_set):
+#         print('    ' + c)
+#
+#     # y_train
+#     print('Getting y_train...')
+#     y_train = trainset_df['label']
+#     del trainset_df['label']
+#
+#     # 区分出类别特征
+#     categorical_features = \
+#         ~trainset_df.columns.isin(numeric_features_set | boolean_features_set)
+#
+#     # X_train
+#     from sklearn.preprocessing import OneHotEncoder
+#     enc = OneHotEncoder(categorical_features=categorical_features)
+#     # enc = OneHotEncoder()
+#     print('Encoding X_train... ')
+#     X_train = enc.fit_transform(trainset_df.values).tocsr()
+#     del trainset_df
+#     gc.collect()
+#
+#     # ===== valid =====
+#     print('Loading {0}...'.format(hdf_validset_fg))
+#     validset_df = pd.read_hdf(path_feature + hdf_validset_fg)
+#
+#     # y_valid
+#     print('Getting y_valid...')
+#     y_valid = validset_df['label']
+#     del validset_df['label']
+#
+#     # X_valid
+#     print('Encoding X_valid... ')
+#     X_valid = enc.transform(validset_df.values).tocsr()
+#     del validset_df
+#     gc.collect()
+#
+#     # ===== test_ol =====
+#     print('Loading {0}...'.format(hdf_testset_ol_fg))
+#     testset_ol_df = pd.read_hdf(path_feature + hdf_testset_ol_fg)
+#
+#     # X_test_ol
+#     print('Encoding X_test_ol... ')
+#     X_test_ol = enc.transform(testset_ol_df.values).tocsr()
+#     del testset_ol_df
+#     gc.collect()
+#
+#     # 停止计时，并打印相关信息
+#     util.print_stop(start)
+#
+#     return X_train, y_train, X_valid, y_valid, X_test_ol
+
+
 def one_hot_tmp():
     # 开始计时，并打印相关信息
     start = time()
@@ -100,8 +166,37 @@ def one_hot_tmp():
     # ===== train =====
     print('Loading {0}...'.format(hdf_trainset_fg))
     trainset_df = pd.read_hdf(path_feature + hdf_trainset_fg)
+    size_train = trainset_df.index.size
+    # y_train
+    print('Getting y_train...')
+    y_train = trainset_df['label']
+    del trainset_df['label']
+    # ===== valid =====
+    print('Loading {0}...'.format(hdf_validset_fg))
+    validset_df = pd.read_hdf(path_feature + hdf_validset_fg)
+    size_valid = validset_df.index.size
+    # y_valid
+    print('Getting y_valid...')
+    y_valid = validset_df['label']
+    del validset_df['label']
+
+    print('Appending rows of validset to the end of trainset, returning dataset...')
+    dataset_df = trainset_df.append(validset_df, ignore_index=True)
+    del trainset_df
+    del validset_df
+    gc.collect()
+
+    # ===== test_ol =====
+    print('Loading {0}...'.format(hdf_testset_ol_fg))
+    testset_ol_df = pd.read_hdf(path_feature + hdf_testset_ol_fg)
+    size_test_ol = testset_ol_df.index.size
+    print('Appending rows of testset_ol to the end of dataset...')
+    dataset_df = dataset_df.append(testset_ol_df, ignore_index=True)
+    del testset_ol_df
+    gc.collect()
+
     # 打印数值特征集合
-    total_columns_set = set(trainset_df.columns.tolist())
+    total_columns_set = set(dataset_df.columns.tolist())
     print('numeric_features: ')
     for c in (numeric_features_set & total_columns_set):
         print('    ' + c)
@@ -109,47 +204,24 @@ def one_hot_tmp():
     for c in (boolean_features_set & total_columns_set):
         print('    ' + c)
 
-    # y_train
-    print('Getting y_train...')
-    y_train = trainset_df['label']
-    del trainset_df['label']
-
     # 区分出类别特征
     categorical_features = \
-        ~trainset_df.columns.isin(numeric_features_set | boolean_features_set)
+        ~dataset_df.columns.isin(numeric_features_set | boolean_features_set)
 
-    # X_train
+    # X
     from sklearn.preprocessing import OneHotEncoder
     enc = OneHotEncoder(categorical_features=categorical_features)
-    # enc = OneHotEncoder()
-    print('Encoding X_train... ')
-    X_train = enc.fit_transform(trainset_df.values).tocsr()
-    del trainset_df
-    gc.collect()
+    print('Encoding X... ')
+    X = enc.fit_transform(dataset_df.values).tocsr()
 
-    # ===== valid =====
-    print('Loading {0}...'.format(hdf_validset_fg))
-    validset_df = pd.read_hdf(path_feature + hdf_validset_fg)
-
-    # y_valid
-    print('Getting y_valid...')
-    y_valid = validset_df['label']
-    del validset_df['label']
-
-    # X_valid
-    print('Encoding X_valid... ')
-    X_valid = enc.transform(validset_df.values).tocsr()
-    del validset_df
-    gc.collect()
-
-    # ===== test_ol =====
-    print('Loading {0}...'.format(hdf_testset_ol_fg))
-    testset_ol_df = pd.read_hdf(path_feature + hdf_testset_ol_fg)
-
-    # X_test_ol
-    print('Encoding X_test_ol... ')
-    X_test_ol = enc.transform(testset_ol_df.values).tocsr()
-    del testset_ol_df
+    # 切片出X_train, X_valid, X_test_ol
+    print('Slicing out X_train...')
+    X_train = X[:size_train, :]
+    print('Slicing out X_valid...')
+    X_valid = X[size_train:(size_train + size_valid), :]
+    print('Slicing out X_test_ol...')
+    X_test_ol = X[(size_train + size_valid):(size_train + size_valid + size_test_ol), :]
+    del X
     gc.collect()
 
     # 停止计时，并打印相关信息
