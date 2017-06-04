@@ -514,6 +514,12 @@ def tuning_hyper_parameters_lr_sim(n_iter_max=10):
     util.print_stop(start)
 
 
+def gen_alphas(alpha):
+    l = alpha / 10
+    alphas = [2*l, 4*l, 6*l, 8*l, alpha, 2*alpha, 4*alpha, 6*alpha, 8*alpha]
+    return alphas
+
+
 def tuning_hyper_parameters_lr_sim_tmp(n_iter_max=10):
     # 开始计时，并打印相关信息
     start = time()
@@ -527,12 +533,12 @@ def tuning_hyper_parameters_lr_sim_tmp(n_iter_max=10):
     from sklearn.metrics import log_loss
 
     # alphas = np.logspace(-6, -2, 5)
-    alphas = [0.000001, 0.000005, 0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005]
+    alphas = [0.000001, 0.00001, 0.0001, 0.001, 0.01]
     alpha_best = 0.0001
     n_iter_initial = 6
     log_loss_train_best = 1
     log_loss_valid_best = 1
-    print('\nTuning alpha.')
+    print('\nTuning alpha in {0}.'.format(alphas))
     print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
     for alpha in alphas:
         clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter_initial, n_jobs=-1, random_state=42)
@@ -546,6 +552,46 @@ def tuning_hyper_parameters_lr_sim_tmp(n_iter_max=10):
         if log_loss_valid < log_loss_valid_best:
             log_loss_valid_best = log_loss_valid
             alpha_best = alpha
+
+    alpha_best_prev = alpha_best
+    alphas = gen_alphas(alpha_best)
+    print('\nTuning alpha in {0}.'.format(alphas))
+    print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
+    for alpha in alphas:
+        clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter_initial, n_jobs=-1, random_state=42)
+        clf.fit(X_train, y_train)
+
+        # 打印在训练集，测试集上的 logloss
+        log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
+        log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
+        print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha, n_iter_initial, log_loss_train, log_loss_valid))
+
+        if log_loss_valid < log_loss_valid_best:
+            log_loss_valid_best = log_loss_valid
+            alpha_best = alpha
+
+    if alpha_best != alpha_best_prev:
+        if alpha_best < alpha_best_prev:
+            num = alpha_best_prev / 10
+            alphas = [alpha_best - num, alpha_best, alpha_best + num]
+        elif alpha_best > alpha_best_prev:
+            num = alpha_best_prev
+            alphas = [alpha_best - num, alpha_best, alpha_best + num]
+
+        print('\nTuning alpha in {0}.'.format(alphas))
+        print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
+        for alpha in alphas:
+            clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter_initial, n_jobs=-1, random_state=42)
+            clf.fit(X_train, y_train)
+
+            # 打印在训练集，测试集上的 logloss
+            log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
+            log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
+            print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha, n_iter_initial, log_loss_train, log_loss_valid))
+
+            if log_loss_valid < log_loss_valid_best:
+                log_loss_valid_best = log_loss_valid
+                alpha_best = alpha
 
     n_iter = 2
     n_iter_best = 5
