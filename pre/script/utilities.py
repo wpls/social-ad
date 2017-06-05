@@ -213,6 +213,40 @@ def f_conversion_ratio(df, column):
     print_stop(start)
 
 
+def f_click_count(df, column):
+    """
+    对 df 中的特定 column 构造 click_count 特征，并存储到硬盘。
+    :param df: pandas.DataFrame 对象
+    :param column: string, 特定 column
+
+    Notes
+    -----
+    存储到硬盘而不是返回结果，是因为 context_train 和 context_test_ol 都需要这些特征，以方便两者做合并。
+    """
+
+    hdf_out = 'f_click_count_' + column + '.h5'
+
+    click_count_column = 'click_count_' + column
+    click_count_square_column = 'click_count_square_' + column
+
+    # 开始计时，并打印相关信息
+    start = print_start(hdf_out)
+
+    count = DataFrame(df[column].value_counts())
+    count.reset_index(inplace=True)
+    count.columns = [column, click_count_column]
+
+    # 归一化
+    count[click_count_column] = min_max_scaling(count[click_count_column])
+    count[click_count_square_column] = count[click_count_column] ** 2
+
+    # 存储
+    safe_save(path_feature, hdf_out, count)
+
+    # 停止计时，并打印相关信息
+    print_stop(start)
+
+
 def f_conversion_count(df, column):
     """
     对 df 中的特定 column 构造 conversion_count 特征，并存储到硬盘。
@@ -354,9 +388,9 @@ def add_feature(df, hdf_file, gen_func):
 
     # 成立的条件是对应的合并column处于第1列
     key = feature.columns.values[0]
-    fn_feature = feature.columns.values[1]
-    # 打印进度信息
-    print_constructing_feature(fn_feature)
+    for fn_feature in feature.columns.values[1:]:
+        # 打印进度信息
+        print_constructing_feature(fn_feature)
 
     # 添加特征
     df = df.merge(feature, how='left', on=key)
@@ -428,6 +462,8 @@ def print_all_column_sample_ratio_min_max():
                             quotechar='|', quoting=csv.QUOTE_MINIMAL)
 
         for c in df.columns:
+            if 'conversion_ratio' in c:
+                continue
             mn = 2 ** 31
             mx = -2 ** 31
             key_set = set(df[c].values)

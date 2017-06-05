@@ -31,9 +31,6 @@ def one_hot():
     print('numeric_features: ')
     for c in (numeric_features_set & total_columns_set):
         print('    ' + c)
-    print('boolean_features: ')
-    for c in (boolean_features_set & total_columns_set):
-        print('    ' + c)
 
     # y_train
     print('Getting y_train...')
@@ -44,7 +41,7 @@ def one_hot():
 
     # 区分出类别特征
     categorical_features = \
-        ~trainset_df.columns.isin(numeric_features_set | boolean_features_set)
+        ~trainset_df.columns.isin(numeric_features_set)
 
     # X_train
     from sklearn.preprocessing import OneHotEncoder
@@ -200,13 +197,10 @@ def one_hot_tmp():
     print('numeric_features: ')
     for c in (numeric_features_set & total_columns_set):
         print('    ' + c)
-    print('boolean_features: ')
-    for c in (boolean_features_set & total_columns_set):
-        print('    ' + c)
 
     # 区分出类别特征
     categorical_features = \
-        ~dataset_df.columns.isin(numeric_features_set | boolean_features_set)
+        ~dataset_df.columns.isin(numeric_features_set)
 
     # X
     from sklearn.preprocessing import OneHotEncoder
@@ -555,46 +549,46 @@ def tuning_hyper_parameters_lr_sim_tmp(n_iter_max=10, fast=True):
                 log_loss_valid_best = log_loss_valid
                 alpha_best = alpha
 
-        # alpha_best_prev = alpha_best
-        # alphas = gen_alphas(alpha_best)
-        # np.set_printoptions(precision=0)
-        # print('\nTuning alpha in {0}.'.format(alphas))
-        # print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
-        # for alpha in alphas:
-        #     clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter_initial, n_jobs=-1, random_state=42)
-        #     clf.fit(X_train, y_train)
-        #
-        #     # 打印在训练集，测试集上的 logloss
-        #     log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
-        #     log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
-        #     print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha, n_iter_initial, log_loss_train, log_loss_valid))
-        #
-        #     if log_loss_valid < log_loss_valid_best:
-        #         log_loss_valid_best = log_loss_valid
-        #         alpha_best = alpha
-        #
-        # if alpha_best != alpha_best_prev:
-        #     if alpha_best < alpha_best_prev:
-        #         num = alpha_best_prev / 10
-        #         alphas = [alpha_best - num, alpha_best, alpha_best + num]
-        #     elif alpha_best > alpha_best_prev:
-        #         num = alpha_best_prev
-        #         alphas = [alpha_best - num, alpha_best, alpha_best + num]
-        #     alphas = np.round(alphas, 6)
-        #     print('\nTuning alpha in {0}.'.format(alphas))
-        #     print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
-        #     for alpha in alphas:
-        #         clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter_initial, n_jobs=-1, random_state=42)
-        #         clf.fit(X_train, y_train)
-        #
-        #         # 打印在训练集，测试集上的 logloss
-        #         log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
-        #         log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
-        #         print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha, n_iter_initial, log_loss_train, log_loss_valid))
-        #
-        #         if log_loss_valid < log_loss_valid_best:
-        #             log_loss_valid_best = log_loss_valid
-        #             alpha_best = alpha
+        alpha_best_prev = alpha_best
+        alphas = gen_alphas(alpha_best)
+        np.set_printoptions(precision=0)
+        print('\nTuning alpha in {0}.'.format(alphas))
+        print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
+        for alpha in alphas:
+            clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter_initial, n_jobs=-1, random_state=42)
+            clf.fit(X_train, y_train)
+
+            # 打印在训练集，测试集上的 logloss
+            log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
+            log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
+            print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha, n_iter_initial, log_loss_train, log_loss_valid))
+
+            if log_loss_valid < log_loss_valid_best:
+                log_loss_valid_best = log_loss_valid
+                alpha_best = alpha
+
+        if alpha_best != alpha_best_prev:
+            if alpha_best < alpha_best_prev:
+                num = alpha_best_prev / 10
+                alphas = [alpha_best - num, alpha_best, alpha_best + num]
+            elif alpha_best > alpha_best_prev:
+                num = alpha_best_prev
+                alphas = [alpha_best - num, alpha_best, alpha_best + num]
+            alphas = np.round(alphas, 6)
+            print('\nTuning alpha in {0}.'.format(alphas))
+            print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
+            for alpha in alphas:
+                clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter_initial, n_jobs=-1, random_state=42)
+                clf.fit(X_train, y_train)
+
+                # 打印在训练集，测试集上的 logloss
+                log_loss_train = log_loss(y_train, clf.predict_proba(X_train))
+                log_loss_valid = log_loss(y_valid, clf.predict_proba(X_valid))
+                print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(alpha, n_iter_initial, log_loss_train, log_loss_valid))
+
+                if log_loss_valid < log_loss_valid_best:
+                    log_loss_valid_best = log_loss_valid
+                    alpha_best = alpha
 
         n_iter = 2
         n_iter_best = 5
@@ -625,7 +619,7 @@ def tuning_hyper_parameters_lr_sim_tmp(n_iter_max=10, fast=True):
         clf_best.fit(X_train, y_train)
     else:
         print('In fast mode.')
-        clf_best = SGDClassifier(loss='log', alpha=0.00001, n_iter=6, n_jobs=-1, random_state=42)
+        clf_best = SGDClassifier(loss='log', alpha=0.000006, n_iter=6, n_jobs=-1, random_state=42)
         clf_best.fit(X_train, y_train)
         print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
         log_loss_train = log_loss(y_train, clf_best.predict_proba(X_train))

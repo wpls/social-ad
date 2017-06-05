@@ -11,7 +11,7 @@ pp.prepare_dataset_all()
 fc.construct_feature()
 # md.one_hot()
 
-md.tuning_hyper_parameters_lr_sim_tmp()
+md.tuning_hyper_parameters_lr_sim_tmp(fast=True)
 # md.predict_test_ol_lr()
 
 print('Running complete.')
