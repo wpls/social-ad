@@ -203,46 +203,46 @@ def f_user_pref_cat():
     util.print_stop(start)
 
 
-def reclassify_residence():
-    """
-    对 residence 重新分类
-    :return:
-    """
-
-    # out_file = path_feature + hdf_residence_cat
-    # if util.is_exist(out_file):
-    #     return
-
-    # 开始计时，并打印相关信息
-    start = util.print_start(hdf_residence_cat)
-
-    # 加载数据集
-    trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
-
-    column = 'residence'
-
-    # 获取负正样本比例
-    sample_ratio = util.get_sample_ratio(trainset_df, column)
-    del trainset_df
-    gc.collect()
-
-    # 获取新类
-    new_cat_list = util.get_new_cat_list(sample_ratio, range(20, 100, 9))
-
-    user_df = pd.read_hdf(path_intermediate_dataset + hdf_user)
-    residence_cat_df = user_df[column].value_counts().reset_index()
-    del user_df
-    gc.collect()
-
-    residence_cat_df.columns = [column, fn_residence_cat]
-
-    residence_cat_df = util.assign_new_cat(residence_cat_df, column, new_cat_list)
-
-    # 存储
-    util.safe_save(path_feature, hdf_residence_cat, residence_cat_df)
-
-    # 停止计时，并打印相关信息
-    util.print_stop(start)
+# def reclassify_residence():
+#     """
+#     对 residence 重新分类
+#     :return:
+#     """
+#
+#     # out_file = path_feature + hdf_residence_cat
+#     # if util.is_exist(out_file):
+#     #     return
+#
+#     # 开始计时，并打印相关信息
+#     start = util.print_start(hdf_residence_cat)
+#
+#     # 加载数据集
+#     trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+#
+#     column = 'residence'
+#
+#     # 获取负正样本比例
+#     sample_ratio = util.get_sample_ratio(trainset_df, column)
+#     del trainset_df
+#     gc.collect()
+#
+#     # 获取新类
+#     new_cat_list = util.get_new_cat_list(sample_ratio, range(20, 100, 9))
+#
+#     user_df = pd.read_hdf(path_intermediate_dataset + hdf_user)
+#     residence_cat_df = user_df[column].value_counts().reset_index()
+#     del user_df
+#     gc.collect()
+#
+#     residence_cat_df.columns = [column, fn_residence_cat]
+#
+#     residence_cat_df = util.assign_new_cat(residence_cat_df, column, new_cat_list)
+#
+#     # 存储
+#     util.safe_save(path_feature, hdf_residence_cat, residence_cat_df)
+#
+#     # 停止计时，并打印相关信息
+#     util.print_stop(start)
 
 
 # ========== feature construction context ==========
@@ -273,6 +273,8 @@ def f_hour_weight():
 
     # 停止计时，并打印相关信息
     util.print_stop(start)
+
+
 #
 #
 # def f_userID():
@@ -729,6 +731,185 @@ def f_user_hour_install_prob():
         util.print_stop(start)
 
 
+def get_userID_click_cumcount(df):
+    df[fn_userID_click_cumcount] = 1
+    userID_click_cumcount = df[
+        ['userID', 'clickTime', fn_userID_click_cumcount]
+    ].groupby(['userID', 'clickTime']).sum().groupby(level=[0]).cumsum()
+    userID_click_cumcount.reset_index(inplace=True)
+    del df[fn_userID_click_cumcount]
+    return userID_click_cumcount
+
+#
+# def get_combi_feat_click_cumcount(df):
+#     for f1, f2 in columns_set_to_construct_click_count_combi:
+#         fn_combi = f1 + '_' + f2
+#         fn_feature = 'click_count_' + fn_combi
+#         df[fn_userID_click_cumcount] = 1
+#         combi_feat_click_cumcount = df[
+#             [fn_combi, 'clickTime', fn_feature]
+#         ].groupby([fn_combi, 'clickTime']).sum().groupby(level=[0]).cumsum()
+#     combi_feat_click_cumcount.reset_index(inplace=True)
+#     del df[fn_userID_click_cumcount]
+#     return combi_feat_click_cumcount
+
+
+def add_click_cumcount_to_trainset(trainset_df):
+    userID_click_cumcount = get_userID_click_cumcount(trainset_df)
+    trainset_df = trainset_df.merge(userID_click_cumcount, how='left', on=['userID', 'clickTime'])
+    del userID_click_cumcount
+    gc.collect()
+
+    return trainset_df
+
+
+def add_click_cumcount_to_validset(validset_df):
+    selected_columns = ['userID', 'clickTime']
+    trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+    dataset_df = trainset_df[selected_columns].append(validset_df[selected_columns], ignore_index=True)
+    userID_click_cumcount = get_userID_click_cumcount(dataset_df)
+    del dataset_df
+    del trainset_df
+    gc.collect()
+    validset_df = validset_df.merge(userID_click_cumcount, how='left', on=['userID', 'clickTime'])
+
+    return validset_df
+
+
+def add_click_cumcount_to_testset_ol(testset_ol_df):
+    selected_columns = ['userID', 'clickTime']
+    trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+    validset_df = pd.read_hdf(path_intermediate_dataset + hdf_validset)
+    dataset_df = trainset_df[selected_columns].append(validset_df[selected_columns], ignore_index=True)
+    dataset_df = dataset_df.append(testset_ol_df[selected_columns], ignore_index=True)
+    userID_click_cumcount = get_userID_click_cumcount(dataset_df)
+    del dataset_df
+    del trainset_df
+    del validset_df
+    gc.collect()
+    testset_ol_df = testset_ol_df.merge(userID_click_cumcount, how='left', on=['userID', 'clickTime'])
+
+    return testset_ol_df
+
+
+def get_userID_stats_conversion_cumcount(df):
+    userID_stats_conversion_cumcount = \
+        df[['userID_stats', 'clickTime', 'label']].groupby(['userID_stats', 'clickTime']).sum().groupby(
+            level=[0]).cumsum()
+    userID_stats_conversion_cumcount.rename(columns={'label': fn_userID_stats_conversion_cumcount}, inplace=True)
+    userID_stats_conversion_cumcount.loc[
+        userID_stats_conversion_cumcount[fn_userID_stats_conversion_cumcount] != 0] -= 1
+    userID_stats_conversion_cumcount.reset_index(inplace=True)
+    return userID_stats_conversion_cumcount
+
+
+def get_conversion_count(df, column):
+    conversion_count_column = 'conversion_count_' + column
+
+    conversion_count = DataFrame(df.loc[df['label'] == 1, column].value_counts())
+    conversion_count.reset_index(inplace=True)
+    conversion_count.columns = [column, conversion_count_column]
+
+    return conversion_count
+
+
+def add_conversion_cumcount_to_trainset(trainset_df):
+    trainset_df['day'] = (trainset_df['clickTime'] / 10000).astype(int)
+    day_list = list(set(trainset_df['day']))
+    res = trainset_df.loc[trainset_df['day'] == day_list[0]].copy()
+    res[fn_userID_stats_conversion_cumcount] = 0
+    for day in day_list[1:]:
+        indexer_today = trainset_df['day'] == day
+        indexer_before = trainset_df['day'] < day
+        df_today = trainset_df.loc[indexer_today].copy()
+        conversion_count_today = get_conversion_count(trainset_df.loc[indexer_before], 'userID_stats')
+        conversion_count_today.rename(
+            columns={'conversion_count_userID_stats': fn_userID_stats_conversion_cumcount},
+            inplace=True)
+        df_today = df_today.merge(conversion_count_today, how='left', on='userID_stats')
+        df_today[fn_userID_stats_conversion_cumcount].fillna(0, inplace=True)
+        res = res.append(df_today, ignore_index=True)
+
+        del conversion_count_today
+        del df_today
+        gc.collect()
+    del res['day']
+    del trainset_df
+    gc.collect()
+    return res
+
+
+# def add_conversion_cumcount_to_validset(validset_df):
+#     selected_columns = ['userID_stats', 'clickTime', 'label']
+#     trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+#     dataset_df = trainset_df[selected_columns].append(validset_df[selected_columns], ignore_index=True)
+#     userID_conversion_cumcount = get_userID_stats_conversion_cumcount(dataset_df)
+#     del dataset_df
+#     del trainset_df
+#     gc.collect()
+#     validset_df = validset_df.merge(userID_conversion_cumcount, how='left', on=['userID_stats', 'clickTime'])
+#
+#     return validset_df
+
+
+def add_conversion_cumcount_to_validset(validset_df):
+    trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+    userID_stats_conversion_count = get_conversion_count(trainset_df, 'userID_stats')
+    userID_stats_conversion_count.rename(columns={'conversion_count_userID_stats': fn_userID_stats_conversion_cumcount},
+                                         inplace=True)
+    del trainset_df
+    gc.collect()
+
+    validset_df = validset_df.merge(userID_stats_conversion_count, how='left', on='userID_stats')
+    validset_df.fillna(value=0, inplace=True)
+
+    return validset_df
+
+
+def add_conversion_cumcount_to_testset_ol(testset_ol_df):
+    trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+    validset_df = pd.read_hdf(path_intermediate_dataset + hdf_validset)
+    dataset_df = trainset_df.append(validset_df, ignore_index=True)
+    userID_stats_conversion_count = get_conversion_count(dataset_df, 'userID_stats')
+    userID_stats_conversion_count.rename(columns={'conversion_count_userID_stats': fn_userID_stats_conversion_cumcount},
+                                         inplace=True)
+    del trainset_df
+    del validset_df
+    del dataset_df
+    gc.collect()
+
+    testset_ol_df = testset_ol_df.merge(userID_stats_conversion_count, how='left', on='userID_stats')
+    testset_ol_df.fillna(value=0, inplace=True)
+
+    return testset_ol_df
+
+
+def f_userID_has_converted():
+    """
+    构造一个表示该用户是否曾经存在转化行为的特征。貌似跟之前的conversion_cumcount很像
+    :return:
+    """
+
+
+def f_combi_feature_click_count():
+    """
+    根据二次组合特征列表添加组合特征的click_count统计
+    :return:
+    """
+    # 加载数据集
+    trainset_df = pd.read_hdf(path_intermediate_dataset + hdf_trainset)
+
+    for f1, f2 in columns_set_to_construct_click_count_combi:
+        fn_combi = f1 + '_' + f2
+        fn_combi_click_count = 'click_count_' + fn_combi
+        util.print_constructing_feature(fn_combi_click_count)
+        trainset_df[fn_combi] = util.elegant_pairing(trainset_df[f1], trainset_df[f2])
+        util.f_click_count(trainset_df, fn_combi)
+
+    del trainset_df
+    gc.collect()
+
+
 def fg_dataset(hdf_out, hdf_in):
     """
     为 trainset 和 testset_ol 添加已经构造好的特征。
@@ -761,12 +942,12 @@ def fg_dataset(hdf_out, hdf_in):
     for c in (dataset_df.columns & columns_set_to_construct_click_count):
         hdf_feature = 'f_click_count_' + c + '.h5'
         fn_feature = 'click_count_' + c
-        fn_feature_2 = 'click_count_square_' + c
+        # fn_feature_2 = 'click_count_square_' + c
         # 添加特征
         dataset_df = util.add_feature(dataset_df, hdf_feature, f_click_count)
         # 填充缺失值
         dataset_df[fn_feature].fillna(dataset_df[fn_feature].mean(), inplace=True)
-        dataset_df[fn_feature_2].fillna(dataset_df[fn_feature_2].mean(), inplace=True)
+        # dataset_df[fn_feature_2].fillna(dataset_df[fn_feature_2].mean(), inplace=True)
 
     # 为每个有效特征添加对应的 conversion_ratio 特征
     for c in (dataset_df.columns & columns_set_to_construct_conversion_ratio):
@@ -800,6 +981,19 @@ def fg_dataset(hdf_out, hdf_in):
         # 填充缺失值
         dataset_df[fn_feature].fillna(0, inplace=True)
 
+    # for f1, f2 in columns_set_to_construct_click_count_combi:
+    #     fn_combi = f1 + '_' + f2
+    #     fn_feature = 'click_count_' + fn_combi
+    #     hdf_feature = 'f_click_count_' + fn_combi + '.h5'
+    #     # 添加二次组合项
+    #     dataset_df[fn_combi] = util.elegant_pairing(dataset_df[f1], dataset_df[f2])
+    #     # 添加特征
+    #     dataset_df = util.add_feature(dataset_df, hdf_feature, f_conversion_count_combi())
+    #     # 删除二次组合特征本身
+    #     del dataset_df[fn_combi]
+    #     # 填充缺失值
+    #     dataset_df[fn_feature].fillna(0, inplace=True)
+
     # 为每个有效特征添加对应的 _hour_prob 特征
     for c in (dataset_df.columns & columns_set_to_construct_hour_prob):
         hdf_feature = 'f_' + c + '_hour_install_prob.h5'
@@ -809,6 +1003,24 @@ def fg_dataset(hdf_out, hdf_in):
         dataset_df = util.add_feature(dataset_df, hdf_feature, f_user_hour_install_prob)
         # 填充缺失值
         dataset_df[fn_feature].fillna(0, inplace=True)
+
+    # 添加 userID_click_cumcount 特征
+    util.print_constructing_feature(fn_userID_click_cumcount)
+    if 'train' in hdf_in:
+        dataset_df = add_click_cumcount_to_trainset(dataset_df)
+    elif 'valid' in hdf_in:
+        dataset_df = add_click_cumcount_to_validset(dataset_df)
+    elif 'test' in hdf_in:
+        dataset_df = add_click_cumcount_to_testset_ol(dataset_df)
+    #
+    # # 添加 userID_conversion_cumcount 特征
+    # util.print_constructing_feature(fn_userID_stats_conversion_cumcount)
+    # if 'train' in hdf_in:
+    #     dataset_df = add_conversion_cumcount_to_trainset(dataset_df)
+    # elif 'valid' in hdf_in:
+    #     dataset_df = add_conversion_cumcount_to_validset(dataset_df)
+    # elif 'test' in hdf_in:
+    #     dataset_df = add_conversion_cumcount_to_testset_ol(dataset_df)
 
     # # 添加 f_hour_weight
     # dataset_df = util.add_feature(dataset_df, hdf_hour_weight, f_hour_weight)
@@ -842,9 +1054,13 @@ def fg_dataset(hdf_out, hdf_in):
     # 添加二次组合特征
     dataset_df = util.add_combi_feature(dataset_df)
 
+    # 添加二次组合特征的统计特征
+
+
     # # 添加三次组合
     # dataset_df['creativeID_appID'] = util.elegant_pairing(dataset_df['creativeID'], dataset_df['appID'])
-    # dataset_df['creativeID_appID_connectionType'] = util.elegant_pairing(dataset_df['creativeID_appID'], dataset_df['connectionType'])
+    # dataset_df['creativeID_appID_connectionType'] = \
+    # util.elegant_pairing(dataset_df['creativeID_appID'], dataset_df['connectionType'])
 
     # # 添加 connectionType_telecomsOperator
     # dataset_df[fn_connectionType_telecomsOperator] = \

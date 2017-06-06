@@ -165,6 +165,50 @@ def action():
     transform_csv_to_hdf(csv_action, hdf_action)
 
 
+def recode_userID(user_df, cols_to_traverse, new_col):
+    """
+    对userID 进行重新编码，或替换或重新生成
+    :param user_df:
+    :param cols_to_traverse:
+    :param new_col:
+    :return:
+    """
+    user_df[new_col] = user_df[cols_to_traverse[0]]
+    for c in cols_to_traverse[1:]:
+        user_df[new_col] = util.elegant_pairing(user_df[new_col], user_df[c])
+        user_df[new_col] = util.recode(user_df[new_col])
+    return user_df
+
+
+def redefine_user(user_df):
+    """
+    对用户进行重新定义。
+    :param user_df:
+    :return:
+    """
+    hometown_set = set(user_df['hometown'])
+    residence_set = set(user_df['residence'])
+    place_list = list(hometown_set | residence_set)
+    place_list.sort()
+
+    place_dict = {}
+    i = 0
+    for place in place_list:
+        place_dict[place] = i
+        i += 1
+
+    user_df['hometown'] = user_df['hometown'].map(place_dict)
+    user_df['residence'] = user_df['residence'].map(place_dict)
+
+    columns = ['age', 'gender', 'education', 'marriageStatus', 'haveBaby', 'hometown', 'residence']
+    columns_less = ['age', 'gender', 'education', 'marriageStatus', 'haveBaby']
+
+    user_df = recode_userID(user_df, columns, 'userID_stats')
+    user_df = recode_userID(user_df, columns_less, 'userID_stats_less')
+
+    return user_df
+
+
 def user():
     out_file = path_intermediate_dataset + hdf_user
     if util.is_exist(out_file):
@@ -183,6 +227,9 @@ def user():
     # # 对 age 分段
     # age_interval = [0, 1, 4, 14, 29, 44, 59, 74, 84]
     # user_df['age'] = pd.cut(user_df['age'], age_interval, right=False, include_lowest=True, labels=False)
+
+    # 重新定义用户
+    redefine_user(user_df)
 
     # 存储
     util.safe_save(path_intermediate_dataset, hdf_user, user_df)

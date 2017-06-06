@@ -61,6 +61,8 @@ fn_app_popularity = 'app_popularity'
 fn_cat_pref = 'cat_pref'
 fn_is_pref_cat = 'is_pref_cat'
 fn_is_child_old = 'is_child_old'
+fn_userID_click_cumcount = 'userID_click_cumcount'
+fn_userID_stats_conversion_cumcount = 'userID_stats_conversion_cumcount'
 
 # 注意用 set 而不是 list，以避免在程序中错误地重复添加
 # 那些取值个数较多的特征, 依次为[677, 3447, 6315, 7219, 2595627]
@@ -91,6 +93,7 @@ numeric_features_set = {
     'click_count_square_age',
     'click_count_sitesetID',
     'click_count_square_sitesetID'
+    # 'conversion_ratio_userID_stats'
 }
 # 那些无法提取 count_ratio 的 columns
 columns_set_without_count_ratio = {
@@ -119,8 +122,8 @@ columns_set_useless = {
 columns_set_inapparent = {
     'marriageStatus',
     'appPlatform',
-    'hour',
-    'week',
+    # 'hour',
+    # 'week',
     # 'user_activity',
     'age',
     'gender',
@@ -133,9 +136,16 @@ columns_set_inapparent = {
     'residence',
     'hometown',
     # 'creativeID',
+    'userID_stats',
+    'userID_stats_less',
     # 'appID',
-    # 'connectionType',
-    # 'creativeID_appID'
+    'connectionType',
+    'positionID',
+    'advertiserID',
+    'appCategory'
+    # 'camgaignID'
+    # 'creativeID'
+    # 'appID'
 }
 # 那些可以构造 click_count 特征的列
 columns_set_to_construct_click_count = {
@@ -164,12 +174,13 @@ columns_set_to_construct_conversion_ratio = {
     # 'residence',
     'adID',
     # 'camgaignID',
-    'advertiserID',
+    'advertiserID'
     # 'appID',
     # 'appPlatform',
     # 'appCategory'
     # 'hour',
     # 'week'
+    # 'userID_stats'
 }
 # 那些可以构造 conversion_count 特征的列
 columns_set_to_construct_conversion_count = set({
@@ -207,7 +218,12 @@ columns_set_to_construct_conversion_count_combi = {
     # 'creativeID_residence'
     # 'creativeID_age'
     # 'creativeID_connectionType'
+    # 'positionID_connectionType'
 }
+# 那些可以构造 click_count 特征的二次组合特征
+columns_set_to_construct_click_count_combi = [
+    ['positionID', 'connectionType']
+]
 # 已被重新分类的列
 columns_set_reclassified = {
     # 'residence',
@@ -216,6 +232,8 @@ columns_set_reclassified = {
 # 组合特征集合
 combi_feature = [
     # ['appID', fn_is_not_wifi],
+    ['creativeID', fn_is_not_wifi],
+    # ['creativeID', 'age'],
     # ['appCategory', 'positionType'],  # 效果不好
     # ['appCategory', 'hometown'],
     # ['appCategory', 'residence'],     # 效果不好
@@ -232,8 +250,31 @@ combi_feature = [
     # ['appCategory', 'marriageStatus']
     # ['appID', 'hour'] # 无明显效果
     # ['age', 'hour'] # 无明显效果
+    # ['gender', 'age'],
+    # ['week', 'hour']
+    # ['appID', 'adID']
+    # ['appID', 'camgaignID'] # 【误差上升5个十万分点，故不保留该特征】
     # ['telecomsOperator', 'connectionType']
-    # ['creativeID', 'connectionType']
+    # ['creativeID', 'appID']
+    ['positionID', 'connectionType'],
+    ['positionID', 'advertiserID'],
+    ['positionID', 'gender'],
+    ['positionID', 'telecomsOperator'],
+    ['positionID', 'marriageStatus'],
+    ['gender', 'education'],
+    # ['marriageStatus', 'residence'],
+    # ['camgaignID', 'connectionType'],
+    # ['age', 'telecomsOperator'],
+    # ['age', 'education'],
+    # ['positionID', 'residence'],
+    # ['positionID', 'education'],
+    # ['positionID', 'camgaignID'],
+    # ['positionID', 'creativeID'],
+    # ['positionID', 'hometown'],
+    # ['positionID', 'age'],
+    # ['positionID', 'appCategory']
+    # ['hometown', 'residence']
+    ['age', 'marriageStatus']
 ]
 
 columns_set_to_construct_hour_prob = {

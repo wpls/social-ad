@@ -201,6 +201,9 @@ def one_hot_tmp():
     # 区分出类别特征
     categorical_features = \
         ~dataset_df.columns.isin(numeric_features_set)
+    print('categorical_features: ')
+    for c in (total_columns_set - numeric_features_set):
+        print('    ' + c)
 
     # X
     from sklearn.preprocessing import OneHotEncoder
@@ -552,7 +555,7 @@ def tuning_hyper_parameters_lr_sim_tmp(n_iter_max=10, fast=True):
         alpha_best_prev = alpha_best
         alphas = gen_alphas(alpha_best)
         np.set_printoptions(precision=0)
-        print('\nTuning alpha in {0}.'.format(alphas))
+        print('\nTuning alpha in {0}.'.format(list(alphas)))
         print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
         for alpha in alphas:
             clf = SGDClassifier(loss='log', alpha=alpha, n_iter=n_iter_initial, n_jobs=-1, random_state=42)
@@ -624,7 +627,7 @@ def tuning_hyper_parameters_lr_sim_tmp(n_iter_max=10, fast=True):
         print('alpha\tn_iter\tlogloss_train\tlogloss_valid')
         log_loss_train = log_loss(y_train, clf_best.predict_proba(X_train))
         log_loss_valid = log_loss(y_valid, clf_best.predict_proba(X_valid))
-        print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(0.00001, 6, log_loss_train, log_loss_valid))
+        print('{0}\t{1}\t{2:0.6f}\t{3:0.6f}'.format(0.000006, 6, log_loss_train, log_loss_valid))
 
     # 手动释放内存
     del X_train

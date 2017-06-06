@@ -227,7 +227,7 @@ def f_click_count(df, column):
     hdf_out = 'f_click_count_' + column + '.h5'
 
     click_count_column = 'click_count_' + column
-    click_count_square_column = 'click_count_square_' + column
+    # click_count_square_column = 'click_count_square_' + column
 
     # 开始计时，并打印相关信息
     start = print_start(hdf_out)
@@ -236,15 +236,26 @@ def f_click_count(df, column):
     count.reset_index(inplace=True)
     count.columns = [column, click_count_column]
 
-    # 归一化
-    count[click_count_column] = min_max_scaling(count[click_count_column])
-    count[click_count_square_column] = count[click_count_column] ** 2
+    # # 归一化
+    # count[click_count_column] = min_max_scaling(count[click_count_column])
+    # count[click_count_square_column] = count[click_count_column] ** 2
 
     # 存储
     safe_save(path_feature, hdf_out, count)
 
     # 停止计时，并打印相关信息
     print_stop(start)
+
+
+# def f_click_cumcount(df, column):
+#     fn_feature = column + '_click_cumcount'
+#     df[fn_feature] = 1
+#     column_click_cumcount = df[
+#         [column, 'clickTime', fn_feature]
+#     ].groupby([column, 'clickTime']).sum().groupby(level=[0]).cumsum()
+#     column_click_cumcount.reset_index(inplace=True)
+#     del df[fn_feature]
+#     return column_click_cumcount
 
 
 def f_conversion_count(df, column):
@@ -560,6 +571,32 @@ def add_combi_feature(df):
     return df
 
 
+def get_click_count(df, column):
+    click_count_column = 'click_count_' + column
+
+    count = DataFrame(df[column].value_counts())
+    count.reset_index(inplace=True)
+    count.columns = [column, click_count_column]
+
+    return df.merge(count, how='left', on=column)
+
+
+def add_combi_feature_click_count(df):
+    """
+    根据二次组合特征列表添加组合特征的click_count统计。
+    :param df:
+    :return:
+    """
+
+    for f1, f2 in columns_set_to_construct_click_count_combi:
+        fn_combi = f1 + '_' + f2
+        fn_combi_click_count = 'click_count_' + fn_combi
+        print_constructing_feature(fn_combi_click_count)
+        df[fn_combi] = elegant_pairing(df[f1], df[f2])
+        df = get_click_count(df, fn_combi)
+    return df
+
+
 def f_count_ratio_for_scoring(df, column):
     neg_count_column = 'neg_count_' + column
     pos_count_column = 'pos_count_' + column
@@ -642,3 +679,19 @@ def analyze_trainset_feature():
     # 存储
     safe_save(path_analysis_res, hdf_pos_score_series, pos_score_series)
     print('Has been stored to {0}.'.format(path_analysis_res + hdf_pos_score_series))
+
+
+def recode(s):
+    """
+    对类别重新编码。
+    :param s: pandas.Series
+    :return: pandas.Series
+    """
+    l = list(set(s))
+    l.sort()
+    dt = {}
+    i = 0
+    for key in l:
+        dt[key] = i
+        i += 1
+    return s.map(dt)
